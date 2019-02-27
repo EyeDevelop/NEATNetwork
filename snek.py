@@ -1,3 +1,4 @@
+import pickle
 import queue
 import select
 import socket
@@ -5,23 +6,20 @@ import socket
 from neat import NEAT
 
 
-class SnekAI(NEAT):
-    def __init__(self):
-        # Network structure is pre-defined.
-        # 225 inputs for the 15x15 grid.
-        # 400 for the first hidden layer.
-        # 200 for the next.
-        # 4 outputs, being a direction. (left, right, up, down)
-        super().__init__(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=50, mutation_chance=20, mutation_severity=3)
+class SnekAI:
+    def __init__(self, load_neat_file=""):
+        if load_neat_file:
+            with open(load_neat_file, "rb") as fp:
+                self.neat_object = pickle.load(fp)
+        else:
+            self.neat_object = NEAT(2, [225, 400, 200, 4], 50, 20, 3)
 
-        # Set up a server socket, on which connections can be received.
         self.server_socket = None
-
-        # Keep a write queue to send data back to the game.
         self.write_queue = {}
-
-        # Keep track of the game score.
         self.current_score = 0
+
+    def fitness(self, inputs: list, outputs: list):
+        pass
 
     def start_server(self, port=6969):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,21 +45,17 @@ class SnekAI(NEAT):
 
                         print("\nSnek Game connected.")
                         print("\nStarting with:")
-                        print("Generation:", self.generation)
-                        print("Individual:", self.current_specimen)
+                        print("Generation:", self.neat_object.generation)
+                        print("Individual:", self.neat_object.current_specimen)
                         print()
 
                         c_sock.setblocking(False)
 
                         inputs.append(c_sock)
                     else:
-                        try:
-                            data = s.recv(1024)
-                        except:
-                            continue
+                        data = s.recv(1024)
 
                         if data:
-                            print("Received message.", repr(data))
                             if s not in write_queue.keys():
                                 write_queue[s] = queue.Queue()
 
@@ -113,10 +107,8 @@ class SnekAI(NEAT):
         data = [int(x) for x in data]
 
         # Separate the data passed into the AI, and the ones used for the fitness function.
-        guess = self.specimen[self.current_specimen].make_prediction(data[:225])  # data contains the grid (15x15)
+        guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:225])  # data contains the grid (15x15)
         current_score = data[225]  # data[225] is the score assigned by the game.
-
-        print("Current score:", current_score)
 
         # Update the current score variable.
         self.current_score = current_score
@@ -124,11 +116,8 @@ class SnekAI(NEAT):
         # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
         move = "LRUD"[guess.index(max(guess))]
 
-        # Notify what move the AI decided on.
-        print("AI tried:", move)
-
         # Send the move, plus the generation and individual number back.
-        return_data = ";".join(map(str, [move, self.generation, self.current_specimen]))
+        return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen]))
 
         return return_data
 
@@ -138,10 +127,10 @@ class SnekAI(NEAT):
         fitness = self.current_score
 
         # Store that in the global fitness dictionary.
-        self.specimen_fitness[self.specimen[self.current_specimen]] = fitness
+        self.neat_object.specimen_fitness[self.neat_object.current_specimen] = fitness
 
         # Let the next AI have a go.
-        self.next_specimen()
+        self.neat_object.next_specimen()
 
         # Notify that the AI died.
         print("\nThe AI died.")
@@ -149,8 +138,8 @@ class SnekAI(NEAT):
 
         # Show the next individual having a go.
         print("\nNow trying:")
-        print("Generation:", self.generation)
-        print("Individual:", self.current_specimen)
+        print("Generation:", self.neat_object.generation)
+        print("Individual:", self.neat_object.current_specimen)
         print()
 
 
@@ -159,7 +148,7 @@ def main(s: SnekAI):
 
 
 if __name__ == "__main__":
-    s = SnekAI()
+    s = SnekAI(load_neat_file="neat.pickle")
 
     try:
         main(s)
@@ -174,7 +163,12 @@ if __name__ == "__main__":
 
     except KeyboardInterrupt:
         print("\nInterrupt received.")
-        print("Exiting...")
+
+        print("Saving NEAT to file...")
+        s.neat_object.save_network()
+
+        print("Closing server socket...")
         s.server_socket.close()
 
+        print("Exiting...")
         exit(0)

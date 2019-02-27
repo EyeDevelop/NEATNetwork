@@ -1,3 +1,4 @@
+import pickle
 import random
 
 from network import Network
@@ -46,7 +47,7 @@ class NEAT:
         fitness = self.fitness(inputs, network_output)
 
         # Store the fitness of the current network.
-        self.specimen_fitness[self.specimen[self.current_specimen]] = fitness
+        self.specimen_fitness[self.current_specimen] = fitness
 
         # Go on to the next specimen.
         self.next_specimen()
@@ -70,18 +71,25 @@ class NEAT:
     # Breed to networks with crossover.
     def breed(self):
         # Sort the networks to get the two best.
-        specimen_sorted = sorted(self.specimen_fitness, key=lambda x: self.specimen_fitness[x])
+        specimen_sorted = sorted(self.specimen_fitness, key=lambda x: self.specimen_fitness[x], reverse=True)
+
+        # Get the two best networks.
+        parent1 = self.specimen[specimen_sorted[0]]
+        parent2 = self.specimen[specimen_sorted[1]]
 
         # Reset the specimen list.
         self.specimen = []
 
         # Start generating population_size children based on the two best in the previous generation.
         for _ in range(self.population_size):
-            child = self.crossover(specimen_sorted[0], specimen_sorted[1])
+            child = self.crossover(parent1, parent2)
             self.specimen.append(child)
 
         # Add 1 to the generation counter.
         self.generation += 1
+
+        # Reset the fitness dictionary.
+        self.specimen_fitness = {}
 
     # A replica of biological genetic crossover applied to neural networks.
     def crossover(self, network1: Network, network2: Network):
@@ -180,3 +188,10 @@ class NEAT:
                     network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] *= (random.random() * 2 - 1)
 
         return network
+
+    # Save the network to a file.
+    def save_network(self, filename="neat.pickle"):
+        # Open the file.
+        with open(filename, "wb") as fp:
+            # Store it as pickle object.
+            pickle.dump(self, fp)

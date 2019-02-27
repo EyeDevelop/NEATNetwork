@@ -1,4 +1,5 @@
 import math
+import pickle
 import random
 
 
@@ -36,6 +37,10 @@ class Neuron:
             self.value = 1 / (1 + math.e ** (- sum(self.inputs)))
         except OverflowError:
             self.value = 1
+
+    # Add a function to clear neuron inputs.
+    def clear_inputs(self):
+        self.inputs = []
 
     # Feed forward the data.
     def feed_forward(self):
@@ -94,6 +99,11 @@ class Network:
                     neuron.connect(last_layer_neuron)
 
     def make_prediction(self, input_values: list):
+        # First reset all neuron values.
+        for layer in self.layers:
+            for neuron in layer:
+                neuron.clear_inputs()
+
         # Set the values of the input neurons (first layer).
         for neuron_index in range(len(self.layers[0])):
             self.layers[0][neuron_index].set_value(input_values[neuron_index])
@@ -107,3 +117,9 @@ class Network:
         values = [neuron.get_value() for neuron in self.layers[-1]]
 
         return values
+
+    # Save the network to a file.
+    def save_network(self, filename="network.pickle"):
+        with open(filename, "wb") as fp:
+            # Dump as pickle file.
+            pickle.dump(self, fp)
