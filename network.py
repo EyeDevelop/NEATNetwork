@@ -1,5 +1,5 @@
-import random
 import math
+import random
 
 
 class Neuron:
@@ -32,7 +32,10 @@ class Neuron:
 
     # Apply sigmoid activation.
     def sigmoid(self):
-        self.value = 1 / (1 + math.e ** (- sum(self.inputs)))
+        try:
+            self.value = 1 / (1 + math.e ** (- sum(self.inputs)))
+        except OverflowError:
+            self.value = 1
 
     # Feed forward the data.
     def feed_forward(self):
