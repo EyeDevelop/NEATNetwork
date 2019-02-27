@@ -12,7 +12,7 @@ class SnekAI(NEAT):
         # 400 for the first hidden layer.
         # 200 for the next.
         # 4 outputs, being a direction. (left, right, up, down)
-        super().__init__(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=10, mutation_chance=20, mutation_severity=3)
+        super().__init__(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=50, mutation_chance=20, mutation_severity=3)
 
         # Set up a server socket, on which connections can be received.
         self.server_socket = None
@@ -67,6 +67,7 @@ class SnekAI(NEAT):
 
                             if "DEAD" in data.decode("utf-8"):
                                 self.handle_death()
+                                write_queue[s].put("U;0;0")
                             else:
                                 response = self.parse_game_data(data)
                                 write_queue[s].put(response)
@@ -92,7 +93,6 @@ class SnekAI(NEAT):
                         except queue.Empty:
                             outputs.remove(s)
                         else:
-                            print("The AI tried:", next_message)
                             s.send(next_message.encode("utf-8"))
 
                 for s in exceptions:
@@ -123,7 +123,14 @@ class SnekAI(NEAT):
 
         # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
         move = "LRUD"[guess.index(max(guess))]
-        return move
+
+        # Notify what move the AI decided on.
+        print("AI tried:", move)
+
+        # Send the move, plus the generation and individual number back.
+        return_data = ";".join(map(str, [move, self.generation, self.current_specimen]))
+
+        return return_data
 
     # A function to handle a client disconnect, meaning the AI died.
     def handle_death(self):
@@ -148,7 +155,7 @@ class SnekAI(NEAT):
 
 
 def main(s: SnekAI):
-    s.start_server()
+    s.start_server(port=6969)
 
 
 if __name__ == "__main__":
