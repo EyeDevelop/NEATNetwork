@@ -119,7 +119,7 @@ class Network:
         return values
 
     # Save the network to a file.
-    def save_network(self, filename="network.pickle"):
+    def save_network(self, filename: str = "network.pickle"):
         with open(filename, "wb") as fp:
             # Dump as pickle file.
             pickle.dump(self, fp)

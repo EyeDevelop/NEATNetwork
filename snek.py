@@ -1,3 +1,4 @@
+import os
 import pickle
 import queue
 import select
@@ -8,11 +9,16 @@ from neat import NEAT
 
 class SnekAI:
     def __init__(self, load_neat_file=""):
+        neat_loaded = False
+
         if load_neat_file:
-            with open(load_neat_file, "rb") as fp:
-                self.neat_object = pickle.load(fp)
-        else:
-            self.neat_object = NEAT(2, [225, 400, 200, 4], 50, 20, 3)
+            if os.path.exists(load_neat_file):
+                with open(load_neat_file, "rb") as fp:
+                    self.neat_object = pickle.load(fp)
+                    neat_loaded = True
+
+        if not neat_loaded:
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=50, mutation_chance=20, mutation_severity=20)
 
         self.server_socket = None
         self.write_queue = {}

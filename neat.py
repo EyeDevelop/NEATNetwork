@@ -71,7 +71,7 @@ class NEAT:
     # Breed to networks with crossover.
     def breed(self):
         # Sort the networks to get the two best.
-        specimen_sorted = sorted(self.specimen_fitness, key=lambda x: self.specimen_fitness[x], reverse=True)
+        specimen_sorted = sorted(self.specimen_fitness.keys(), key=lambda x: self.specimen_fitness[x], reverse=True)
 
         # Get the two best networks.
         parent1 = self.specimen[specimen_sorted[0]]
@@ -190,7 +190,7 @@ class NEAT:
         return network
 
     # Save the network to a file.
-    def save_network(self, filename="neat.pickle"):
+    def save_network(self, filename: str = "neat.pickle"):
         # Open the file.
         with open(filename, "wb") as fp:
             # Store it as pickle object.
