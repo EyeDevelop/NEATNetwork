@@ -9,6 +9,7 @@ from neat import NEAT
 
 class SnekAI:
     def __init__(self, load_neat_file=""):
+        # Check if the file exists, and if it does, load it.
         neat_loaded = False
 
         if load_neat_file:
@@ -17,16 +18,24 @@ class SnekAI:
                     self.neat_object = pickle.load(fp)
                     neat_loaded = True
 
+        # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
             self.neat_object = NEAT(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=50, mutation_chance=20, mutation_severity=20)
 
+        # Make a central server socket.
         self.server_socket = None
+
+        # Keep a write queue to write to clients.
         self.write_queue = {}
+
+        # Keep track of the current score of the AI.
         self.current_score = 0
 
+    # This function is obsolete, learning is handled by networked functions.
     def fitness(self, inputs: list, outputs: list):
         pass
 
+    # Run the AI over the network.
     def start_server(self, port=6969):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -34,19 +43,19 @@ class SnekAI:
             inputs = [self.server_socket]
             outputs = []
 
+            # Start accepting connections.
             self.server_socket.setblocking(False)
             self.server_socket.bind(('', port))
             self.server_socket.listen(1)
 
             print("Ready for connections.")
 
-            write_queue = {}
-
             while inputs:
                 readable, writable, exceptions = select.select(inputs, outputs, inputs)
 
                 for s in readable:
                     if s is self.server_socket:
+                        # Accept a new client if available.
                         c_sock, _ = self.server_socket.accept()
 
                         print("\nSnek Game connected.")
@@ -59,49 +68,59 @@ class SnekAI:
 
                         inputs.append(c_sock)
                     else:
+                        # Read the data sent to us.
                         data = s.recv(1024)
 
+                        # The data has to be something, otherwise the client isn't connected.
                         if data:
-                            if s not in write_queue.keys():
-                                write_queue[s] = queue.Queue()
+                            # Add s to the write queue after receiving.
+                            if s not in self.write_queue.keys():
+                                self.write_queue[s] = queue.Queue()
 
+                            # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
                                 self.handle_death()
-                                write_queue[s].put("U;0;0")
+                                self.write_queue[s].put("U;0;0")
                             else:
+                                # Let the AI make a move.
                                 response = self.parse_game_data(data)
-                                write_queue[s].put(response)
+                                self.write_queue[s].put(response)
 
                             if s not in outputs:
                                 outputs.append(s)
                         else:
+                            # The client is disconnected. Remove from lists and break the connection.
                             if s in outputs:
                                 outputs.remove(s)
 
                             inputs.remove(s)
                             s.close()
 
-                            if s in write_queue.keys():
-                                del write_queue[s]
+                            if s in self.write_queue.keys():
+                                del self.write_queue[s]
 
                             print("\nLost connection to Snek.")
 
                 for s in writable:
-                    if s in write_queue.keys():
+                    # Write back to the client if a message awaits them.
+                    if s in self.write_queue.keys():
                         try:
-                            next_message = write_queue[s].get_nowait()
+                            # Get the message waiting to be sent from the queue.
+                            next_message = self.write_queue[s].get_nowait()
                         except queue.Empty:
                             outputs.remove(s)
                         else:
+                            # Send the message.
                             s.send(next_message.encode("utf-8"))
 
                 for s in exceptions:
+                    # Something went wrong with the client. Break off connection.
                     if s in outputs:
                         outputs.remove(s)
 
                     inputs.remove(s)
                     s.close()
-                    del write_queue[s]
+                    del self.write_queue[s]
 
                     print("\nLost connection to Snek.")
 
@@ -154,9 +173,11 @@ def main(s: SnekAI):
 
 
 if __name__ == "__main__":
+    # Make a SnakeAI object and try to resume where it left off training.
     s = SnekAI(load_neat_file="neat.pickle")
 
     try:
+        # Run the main function.
         main(s)
 
     except Exception as e:
