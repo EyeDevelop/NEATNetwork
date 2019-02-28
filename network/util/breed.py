@@ -1,10 +1,9 @@
 # A replica of biological genetic crossover applied to neural networks.
-from network.classes.neat import NEAT
 from network.classes.network import Network
 from network.util import rng
 
 
-def crossover(neat_object: NEAT, network1: Network, network2: Network):
+def crossover(neat_object, network1: Network, network2: Network):
     # Make a list of weights of the first parent network.
     weights1 = []
 
