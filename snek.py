@@ -20,7 +20,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 20, 20, 4], population_size=100, retention_rate=5, mutation_chance=5, mutation_severity=5, activation_function="tanh", breeding_function="crossover")
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 20, 20, 4], population_size=100, retention_rate=5, mutation_chance=10, mutation_severity=5, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -48,7 +48,7 @@ class SnekAI:
             self.server_socket.bind(('', port))
             self.server_socket.listen(1)
 
-            print("Ready for connections.")
+            print(f"Ready for connections on {port}.")
 
             while inputs:
                 readable, writable, exceptions = select.select(inputs, outputs, inputs)
@@ -80,7 +80,7 @@ class SnekAI:
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
                                 self.handle_death()
-                                self.write_queue[s].put("U;0;0")
+                                self.write_queue[s].put("U;0;0;0.0")  # Otherwise Unity dies.
                             else:
                                 # Let the AI make a move.
                                 response = self.parse_game_data(data)
@@ -142,7 +142,7 @@ class SnekAI:
         move = "LRUD"[guess.index(max(guess))]
 
         # Send the move, plus the generation and individual number back.
-        return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen]))
+        return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
 
         return return_data
 
@@ -169,7 +169,10 @@ class SnekAI:
 
 
 def main(s: SnekAI):
-    s.start_server(port=6969)
+    try:
+        s.start_server(port=6969)
+    except OSError:
+        s.start_server(port=6968)
 
 
 if __name__ == "__main__":

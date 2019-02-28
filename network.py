@@ -1,6 +1,6 @@
 import math
 import pickle
-import random
+import rng
 
 
 class Neuron:
@@ -25,7 +25,7 @@ class Neuron:
 
         # Set the bias of the neuron.
         if bias is None:
-            self.bias = random.random()
+            self.bias = rng.random_number()
         else:
             self.bias = bias
 
@@ -72,8 +72,7 @@ class Neuron:
     def feed_forward(self):
         # Run the activation function before feed-forward.
         # But only if it's not an input neuron. Then the value is already set.
-        if not self.is_input_neuron:
-            self.activation_function()
+        self.activation_function()
 
         # Only feed-forward if the bias has been met.
         if self.value > self.bias:
@@ -88,7 +87,7 @@ class Neuron:
         # Initialise weight if it's not specified.
         if weight is None:
             # Weight is between -3 and 3
-            weight = random.random() * 6 - 3
+            weight = rng.random_number() * 6 - 3
 
         # Add the actual connection.
         self.connections.append([neuron_connector, weight])
@@ -137,7 +136,7 @@ class Network:
 
         # Set the values of the input neurons (first layer).
         for neuron_index in range(len(self.layers[0])):
-            self.layers[0][neuron_index].set_value(input_values[neuron_index])
+            self.layers[0][neuron_index].add_input(input_values[neuron_index])
 
         # Feed forward the data
         for layer in self.layers:

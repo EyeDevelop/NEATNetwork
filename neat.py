@@ -1,5 +1,5 @@
 import pickle
-import random
+import rng
 
 from network import Network
 
@@ -91,7 +91,9 @@ class NEAT:
 
         # The best retention_rate networks will be put in the next generation.
         for key in specimen_sorted[:self.retention_rate]:
-            retention_specimen.append(self.specimen[key])
+            # Mutate the network.
+            new_network = self.mutate(self.specimen[key])
+            retention_specimen.append(new_network)
 
         # Reset the specimen list.
         self.specimen = retention_specimen
@@ -146,10 +148,11 @@ class NEAT:
             weights2.append(layer_weights)
 
         # Decide on a split point
-        split_point = random.randint(0, sum(self.neuron_counts) - 1)
+        split_point_1 = rng.randint(0, sum(self.neuron_counts) - 3)
+        split_point_2 = rng.randint(split_point_1, sum(self.neuron_counts) - 1)
 
         # Keep track of whether the split has been surpassed.
-        split_point_passed = False
+        split_point = False
 
         # Also keep track of how many neurons have been passed.
         neurons_passed = 0
@@ -162,7 +165,7 @@ class NEAT:
             for neuron_index in range(len(weights1[layer_index])):
                 for connection_index in range(len(weights1[layer_index][neuron_index])):
                     # If the crossover point hasn't been reached yet, we use weights1 as parent.
-                    if not split_point_passed:
+                    if not split_point:
                         parent = weights1
                     else:
                         parent = weights2
@@ -174,8 +177,10 @@ class NEAT:
                     child.layers[layer_index][neuron_index].connections[connection_index][1] = parent_weight
 
                 neurons_passed += 1
-                if neurons_passed >= split_point and not split_point_passed:
-                    split_point_passed = True
+                if neurons_passed >= split_point_1 and not split_point and not neurons_passed >= split_point_2:
+                    split_point = True
+                elif neurons_passed >= split_point_2 and split_point:
+                    split_point = False
 
         return child
 
@@ -219,7 +224,7 @@ class NEAT:
             for neuron_index in range(len(weights1[layer_index])):
                 for connection_index in range(len(weights1[layer_index][neuron_index])):
                     # Pick the weight randomly
-                    parent_weight = random.choice([
+                    parent_weight = rng.choice([
                         weights1[layer_index][neuron_index][connection_index],
                         weights2[layer_index][neuron_index][connection_index],
                     ])
@@ -232,29 +237,29 @@ class NEAT:
     # A function to apply random mutation to networks to provide the genetic variation.
     def mutate(self, network):
         # Only mutate if the chance is met.
-        if random.randint(0, self.mutation_chance) == 0:
+        if rng.randint(0, self.mutation_chance) == 0:
 
             # Mutate self.mutation_severity times
             for _ in range(self.mutation_severity):
                 # Get the neuron that is going to be mutated.
-                mutation_layer = random.randint(0, len(network.layers) - 1)
-                mutation_neuron = random.randint(0, len(network.layers[mutation_layer]) - 1)
+                mutation_layer = rng.randint(0, len(network.layers) - 1)
+                mutation_neuron = rng.randint(0, len(network.layers[mutation_layer]) - 1)
 
                 # Mutate the bias or mutate the weight?
-                mutate_bias = random.randint(0, 1) == 1
+                mutate_bias = rng.randint(0, 1) == 1
 
                 if mutate_bias:
                     # Mutate the bias to a new random value.
-                    network.layers[mutation_layer][mutation_neuron].bias = random.random()
+                    network.layers[mutation_layer][mutation_neuron].bias = rng.random_number()
                 else:
                     # Cannot mutate a connection that doesn't exist (for example a neuron in the output layer). Perform that check first.
                     if len(network.layers[mutation_layer][mutation_neuron].connections) <= 0:
                         continue
 
-                    mutation_connection = random.randint(0, len(network.layers[mutation_layer][mutation_neuron].connections) - 1)
+                    mutation_connection = rng.randint(0, len(network.layers[mutation_layer][mutation_neuron].connections) - 1)
 
                     # Add the mutation to the current value, to make a small change.
-                    network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] *= (random.random() * 2 - 1)
+                    network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] *= (rng.random_number() * 2 - 1)
 
         return network
 
