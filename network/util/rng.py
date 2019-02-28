@@ -5,12 +5,7 @@ NUMBERS_GENERATED = 0
 
 
 def random_check():
-    global NUMBERS_GENERATED
-
-    if NUMBERS_GENERATED > 1000:
-        random.seed()
-    else:
-        NUMBERS_GENERATED += 1
+    random.seed()
 
 
 def randint(a, b):

@@ -1,6 +1,7 @@
-import math
 import pickle
-import rng
+
+from network.util import activation
+from network.util import rng
 
 
 class Neuron:
@@ -15,8 +16,8 @@ class Neuron:
 
         # Keep track of network settings.
         self.activation_function = {
-            "sigmoid": self.sigmoid,
-            "tanh": self.tanh,
+            "sigmoid": activation.sigmoid,
+            "tanh": activation.tanh,
             "binary_step": self.binary_step
         }[activation_function]
 
@@ -41,26 +42,6 @@ class Neuron:
     def add_input(self, value: float):
         self.inputs.append(value)
 
-    # Apply sigmoid activation.
-    def sigmoid(self):
-        try:
-            self.value = 1 / (1 + math.e ** (- sum(self.inputs)))
-        except OverflowError:
-            if sum(self.inputs) > 0:
-                self.value = 1
-            else:
-                self.value = 0
-
-    # Apply TanH activation.
-    def tanh(self):
-        try:
-            self.value = (math.e ** sum(self.inputs) - math.e ** -sum(self.inputs)) / (math.e ** sum(self.inputs) + math.e ** -sum(self.inputs))
-        except OverflowError:
-            if sum(self.inputs) > 0:
-                self.value = 1
-            else:
-                self.value = -1
-
     def binary_step(self):
         self.value = 1 if sum(self.inputs) > 0 else 0
 
@@ -72,7 +53,7 @@ class Neuron:
     def feed_forward(self):
         # Run the activation function before feed-forward.
         # But only if it's not an input neuron. Then the value is already set.
-        self.activation_function()
+        self.value = self.activation_function(self.inputs)
 
         # Only feed-forward if the bias has been met.
         if self.value > self.bias:

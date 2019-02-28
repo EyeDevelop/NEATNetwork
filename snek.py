@@ -4,7 +4,7 @@ import queue
 import select
 import socket
 
-from neat import NEAT
+from network.classes.neat import NEAT
 
 
 class SnekAI:
@@ -20,7 +20,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 20, 20, 4], population_size=100, retention_rate=5, mutation_chance=10, mutation_severity=5, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 25, 25, 4], population_size=100, retention_rate=10, mutation_chance=50, mutation_severity=2, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None

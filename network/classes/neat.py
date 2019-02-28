@@ -1,11 +1,11 @@
 import pickle
-import rng
 
-from network import Network
+from network.classes.network import Network
+from network.util import rng, breed
 
 
 class NEAT:
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: int = 20, mutation_severity: int = 3, retention_rate=5, activation_function="sigmoid", breeding_function="crossover"):
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: int = 20, mutation_severity: int = 3, retention_rate=5, activation_function="tanh", breeding_function="crossover"):
         # Keep track of the generation being trained and the previous score.
         self.generation = 0
         self.previous_generation_score = 0
@@ -29,8 +29,8 @@ class NEAT:
         self.activation_function = activation_function
 
         self.breeding_function = {
-            "crossover": self.crossover,
-            "random_gene_copy": self.random_gene_copy
+            "crossover": breed.crossover,
+            "random_gene_copy": breed.random_gene_copy
         }[breeding_function]
 
         # Make a list of networks in the current generation.
@@ -98,10 +98,18 @@ class NEAT:
         # Reset the specimen list.
         self.specimen = retention_specimen
 
+        # Let 50% of the next generation be created by the two best.
+        # The other 50% by the other networks in the retention_specimen list.
+        half_index = (self.population_size - self.retention_rate) // 2
+
         # Start generating population_size children based on the two best in the previous generation.
-        for _ in range(self.population_size - self.retention_rate):
+        for i in range(self.population_size - self.retention_rate):
+            if i >= half_index:
+                parent1 = rng.choice(retention_specimen)
+                parent2 = rng.choice(retention_specimen)
+
             # Make a child based on the parents.
-            child = self.breeding_function(parent1, parent2)
+            child = self.breeding_function(self, parent1, parent2)
 
             # Mutate the child.
             child = self.mutate(child)
@@ -115,129 +123,10 @@ class NEAT:
         # Reset the fitness dictionary.
         self.specimen_fitness = {}
 
-    # A replica of biological genetic crossover applied to neural networks.
-    def crossover(self, network1: Network, network2: Network):
-        # Make a list of weights of the first parent network.
-        weights1 = []
-
-        # Do the same for the second parent.
-        weights2 = []
-
-        # Get the weights of the first parent.
-        for layer in network1.layers:
-            layer_weights = []
-
-            for neuron in layer:
-                connection_weights = []
-
-                for connection in neuron.connections:
-                    connection_weights.append(connection[1])
-                layer_weights.append(connection_weights)
-            weights1.append(layer_weights)
-
-        # Get the weights of the second parent.
-        for layer in network2.layers:
-            layer_weights = []
-
-            for neuron in layer:
-                connection_weights = []
-
-                for connection in neuron.connections:
-                    connection_weights.append(connection[1])
-                layer_weights.append(connection_weights)
-            weights2.append(layer_weights)
-
-        # Decide on a split point
-        split_point_1 = rng.randint(0, sum(self.neuron_counts) - 3)
-        split_point_2 = rng.randint(split_point_1, sum(self.neuron_counts) - 1)
-
-        # Keep track of whether the split has been surpassed.
-        split_point = False
-
-        # Also keep track of how many neurons have been passed.
-        neurons_passed = 0
-
-        # Create a child network.
-        child = Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function)
-
-        # Perform the actual crossover.
-        for layer_index in range(len(weights1)):
-            for neuron_index in range(len(weights1[layer_index])):
-                for connection_index in range(len(weights1[layer_index][neuron_index])):
-                    # If the crossover point hasn't been reached yet, we use weights1 as parent.
-                    if not split_point:
-                        parent = weights1
-                    else:
-                        parent = weights2
-
-                    # Select the parent weight.
-                    parent_weight = parent[layer_index][neuron_index][connection_index]
-
-                    # Set the child neuron weights.
-                    child.layers[layer_index][neuron_index].connections[connection_index][1] = parent_weight
-
-                neurons_passed += 1
-                if neurons_passed >= split_point_1 and not split_point and not neurons_passed >= split_point_2:
-                    split_point = True
-                elif neurons_passed >= split_point_2 and split_point:
-                    split_point = False
-
-        return child
-
-    # Do fully random choice of weights.
-    def random_gene_copy(self, network1: Network, network2: Network):
-        # Make a list of weights of the first parent network.
-        weights1 = []
-
-        # Do the same for the second parent.
-        weights2 = []
-
-        # Get the weights of the first parent.
-        for layer in network1.layers:
-            layer_weights = []
-
-            for neuron in layer:
-                connection_weights = []
-
-                for connection in neuron.connections:
-                    connection_weights.append(connection[1])
-                layer_weights.append(connection_weights)
-            weights1.append(layer_weights)
-
-        # Get the weights of the second parent.
-        for layer in network2.layers:
-            layer_weights = []
-
-            for neuron in layer:
-                connection_weights = []
-
-                for connection in neuron.connections:
-                    connection_weights.append(connection[1])
-                layer_weights.append(connection_weights)
-            weights2.append(layer_weights)
-
-        # Generate a child.
-        child = Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function)
-
-        # Update the child weights.
-        for layer_index in range(len(weights1)):
-            for neuron_index in range(len(weights1[layer_index])):
-                for connection_index in range(len(weights1[layer_index][neuron_index])):
-                    # Pick the weight randomly
-                    parent_weight = rng.choice([
-                        weights1[layer_index][neuron_index][connection_index],
-                        weights2[layer_index][neuron_index][connection_index],
-                    ])
-
-                    # Set the child weight
-                    child.layers[layer_index][neuron_index].connections[connection_index][1] = parent_weight
-
-        return child
-
     # A function to apply random mutation to networks to provide the genetic variation.
     def mutate(self, network):
         # Only mutate if the chance is met.
-        if rng.randint(0, self.mutation_chance) == 0:
+        if rng.random_number() < self.mutation_chance:
 
             # Mutate self.mutation_severity times
             for _ in range(self.mutation_severity):
