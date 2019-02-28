@@ -4,7 +4,7 @@ import random
 
 
 class Neuron:
-    def __init__(self, bias: float = None):
+    def __init__(self, bias: float = None, is_input_neuron: float = False, activation_function: str = "sigmoid"):
         # Keep track of connections to other neurons and their weights.
         # Structure should be (node: Neuron, weight: float).
         self.connections = []
@@ -12,6 +12,16 @@ class Neuron:
         # Keep track of the inputs (* weights) of other neurons.
         self.inputs = []
         self.value = 0.0
+
+        # Keep track of network settings.
+        self.activation_function = {
+            "sigmoid": self.sigmoid,
+            "tanh": self.tanh,
+            "binary_step": self.binary_step
+        }[activation_function]
+
+        # The neuron has to know if it's an input neuron.
+        self.is_input_neuron = is_input_neuron
 
         # Set the bias of the neuron.
         if bias is None:
@@ -36,7 +46,23 @@ class Neuron:
         try:
             self.value = 1 / (1 + math.e ** (- sum(self.inputs)))
         except OverflowError:
-            self.value = 1
+            if sum(self.inputs) > 0:
+                self.value = 1
+            else:
+                self.value = 0
+
+    # Apply TanH activation.
+    def tanh(self):
+        try:
+            self.value = (math.e ** sum(self.inputs) - math.e ** -sum(self.inputs)) / (math.e ** sum(self.inputs) + math.e ** -sum(self.inputs))
+        except OverflowError:
+            if sum(self.inputs) > 0:
+                self.value = 1
+            else:
+                self.value = -1
+
+    def binary_step(self):
+        self.value = 1 if sum(self.inputs) > 0 else 0
 
     # Add a function to clear neuron inputs.
     def clear_inputs(self):
@@ -44,8 +70,10 @@ class Neuron:
 
     # Feed forward the data.
     def feed_forward(self):
-        # Apple sigmoid activation before feed-forward.
-        self.sigmoid()
+        # Run the activation function before feed-forward.
+        # But only if it's not an input neuron. Then the value is already set.
+        if not self.is_input_neuron:
+            self.activation_function()
 
         # Only feed-forward if the bias has been met.
         if self.value > self.bias:
@@ -67,13 +95,13 @@ class Neuron:
 
 
 class Network:
-    def __init__(self, layer_count: int, neuron_counts: list):
+    def __init__(self, layer_count: int, neuron_counts: list, activation_function: str = "sigmoid"):
         # Make the general network structure.
         self.layers: list = []
-        self.make_layers(layer_count, neuron_counts)
+        self.make_layers(layer_count, neuron_counts, activation_function)
         self.connect_neurons()
 
-    def make_layers(self, layer_count: int, neuron_counts: list):
+    def make_layers(self, layer_count: int, neuron_counts: list, activation_function: str):
         for layer_index in range(layer_count + 2):  # The (+ 2) is for the input and output layer.
             # Create an intermediary list to keep neurons in.
             layer = []
@@ -82,8 +110,11 @@ class Network:
             neuron_count = neuron_counts[layer_index]
 
             for neuron_index in range(neuron_count):
-                # Add a neuron with random weights to the list.
-                layer.append(Neuron())
+                # Add a neuron with random biases to the list.
+                if layer_index == 0:
+                    layer.append(Neuron(is_input_neuron=True, activation_function=activation_function))
+                else:
+                    layer.append(Neuron(activation_function=activation_function))
 
             # Add the layer to the central layers list.
             self.layers.append(layer)

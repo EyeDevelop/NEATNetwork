@@ -5,7 +5,7 @@ from network import Network
 
 
 class NEAT:
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: int = 20, mutation_severity: int = 3):
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: int = 20, mutation_severity: int = 3, retention_rate=5, activation_function="sigmoid", breeding_function="crossover"):
         # Keep track of the generation being trained and the previous score.
         self.generation = 0
         self.previous_generation_score = 0
@@ -20,9 +20,18 @@ class NEAT:
 
         # Store the population size
         self.population_size = population_size
+        self.retention_rate = retention_rate
 
         # Keep track of the current network being assessed.
         self.current_specimen = 0
+
+        # Update network settings.
+        self.activation_function = activation_function
+
+        self.breeding_function = {
+            "crossover": self.crossover,
+            "random_gene_copy": self.random_gene_copy
+        }[breeding_function]
 
         # Make a list of networks in the current generation.
         self.specimen = []
@@ -33,7 +42,7 @@ class NEAT:
     def reset_generation(self):
         # Generate the random networks and store them in the specimen list.
         for _ in range(self.population_size):
-            self.specimen.append(Network(self.layer_count, self.neuron_counts))
+            self.specimen.append(Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function))
 
     # The function to determine the fitness of a network is different each time,
     # so this function needs to be abstract.
@@ -77,12 +86,25 @@ class NEAT:
         parent1 = self.specimen[specimen_sorted[0]]
         parent2 = self.specimen[specimen_sorted[1]]
 
+        # Make a placeholder list to keep the best networks in.
+        retention_specimen = []
+
+        # The best retention_rate networks will be put in the next generation.
+        for key in specimen_sorted[:self.retention_rate]:
+            retention_specimen.append(self.specimen[key])
+
         # Reset the specimen list.
-        self.specimen = []
+        self.specimen = retention_specimen
 
         # Start generating population_size children based on the two best in the previous generation.
-        for _ in range(self.population_size):
-            child = self.crossover(parent1, parent2)
+        for _ in range(self.population_size - self.retention_rate):
+            # Make a child based on the parents.
+            child = self.breeding_function(parent1, parent2)
+
+            # Mutate the child.
+            child = self.mutate(child)
+
+            # Add it to the specimen list.
             self.specimen.append(child)
 
         # Add 1 to the generation counter.
@@ -133,7 +155,7 @@ class NEAT:
         neurons_passed = 0
 
         # Create a child network.
-        child = Network(self.layer_count, self.neuron_counts)
+        child = Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function)
 
         # Perform the actual crossover.
         for layer_index in range(len(weights1)):
@@ -155,8 +177,55 @@ class NEAT:
                 if neurons_passed >= split_point and not split_point_passed:
                     split_point_passed = True
 
-        # Mutate the child.
-        child = self.mutate(child)
+        return child
+
+    # Do fully random choice of weights.
+    def random_gene_copy(self, network1: Network, network2: Network):
+        # Make a list of weights of the first parent network.
+        weights1 = []
+
+        # Do the same for the second parent.
+        weights2 = []
+
+        # Get the weights of the first parent.
+        for layer in network1.layers:
+            layer_weights = []
+
+            for neuron in layer:
+                connection_weights = []
+
+                for connection in neuron.connections:
+                    connection_weights.append(connection[1])
+                layer_weights.append(connection_weights)
+            weights1.append(layer_weights)
+
+        # Get the weights of the second parent.
+        for layer in network2.layers:
+            layer_weights = []
+
+            for neuron in layer:
+                connection_weights = []
+
+                for connection in neuron.connections:
+                    connection_weights.append(connection[1])
+                layer_weights.append(connection_weights)
+            weights2.append(layer_weights)
+
+        # Generate a child.
+        child = Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function)
+
+        # Update the child weights.
+        for layer_index in range(len(weights1)):
+            for neuron_index in range(len(weights1[layer_index])):
+                for connection_index in range(len(weights1[layer_index][neuron_index])):
+                    # Pick the weight randomly
+                    parent_weight = random.choice([
+                        weights1[layer_index][neuron_index][connection_index],
+                        weights2[layer_index][neuron_index][connection_index],
+                    ])
+
+                    # Set the child weight
+                    child.layers[layer_index][neuron_index].connections[connection_index][1] = parent_weight
 
         return child
 

@@ -20,7 +20,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[225, 400, 200, 4], population_size=50, mutation_chance=20, mutation_severity=20)
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 20, 20, 4], population_size=100, retention_rate=5, mutation_chance=5, mutation_severity=5, activation_function="tanh", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -132,8 +132,8 @@ class SnekAI:
         data = [int(x) for x in data]
 
         # Separate the data passed into the AI, and the ones used for the fitness function.
-        guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:225])  # data contains the grid (15x15)
-        current_score = data[225]  # data[225] is the score assigned by the game.
+        guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
+        current_score = data[24]  # data[24] is de score.
 
         # Update the current score variable.
         self.current_score = current_score
@@ -174,7 +174,7 @@ def main(s: SnekAI):
 
 if __name__ == "__main__":
     # Make a SnakeAI object and try to resume where it left off training.
-    s = SnekAI(load_neat_file="neat.pickle")
+    s = SnekAI()
 
     try:
         # Run the main function.
