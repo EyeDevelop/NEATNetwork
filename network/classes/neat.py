@@ -30,7 +30,8 @@ class NEAT:
 
         self.breeding_function = {
             "crossover": breed.crossover,
-            "random_gene_copy": breed.random_gene_copy
+            "random_gene_copy": breed.random_gene_copy,
+            "mutation_variants": breed.mutation_variants,
         }[breeding_function]
 
         # Make a list of networks in the current generation.
