@@ -5,7 +5,7 @@ from network.util import rng, breed
 
 
 class NEAT:
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: int = 20, mutation_severity: int = 3, retention_rate=5, activation_function="tanh", breeding_function="crossover"):
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: float = 0.02, mutation_severity: int = 3, retention_rate=5, activation_function="tanh", breeding_function="crossover"):
         # Keep track of the generation being trained and the previous score.
         self.generation = 0
         self.previous_generation_score = 0
@@ -91,12 +91,18 @@ class NEAT:
 
         # The best retention_rate networks will be put in the next generation.
         for key in specimen_sorted[:self.retention_rate]:
-            # Mutate the network.
-            new_network = self.mutate(self.specimen[key])
-            retention_specimen.append(new_network)
+            retention_specimen.append(self.specimen[key])
 
         # Reset the specimen list.
         self.specimen = retention_specimen
+
+        # Mutate the networks copied over.
+        for specimen_index in range(len(self.specimen)):
+            # Mutate the network.
+            mutated_network = self.mutate(self.specimen[specimen_index])
+
+            # Replace the un-mutated network.
+            self.specimen[specimen_index] = mutated_network
 
         # Let 50% of the next generation be created by the two best.
         # The other 50% by the other networks in the retention_specimen list.
@@ -126,7 +132,7 @@ class NEAT:
     # A function to apply random mutation to networks to provide the genetic variation.
     def mutate(self, network):
         # Only mutate if the chance is met.
-        if rng.random_number() < self.mutation_chance:
+        if rng.random_number() <= self.mutation_chance:
 
             # Mutate self.mutation_severity times
             for _ in range(self.mutation_severity):

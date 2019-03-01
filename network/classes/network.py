@@ -18,7 +18,8 @@ class Neuron:
         self.activation_function = {
             "sigmoid": activation.sigmoid,
             "tanh": activation.tanh,
-            "binary_step": self.binary_step
+            "binary_step": activation.binary_step,
+            "relu": activation.relu,
         }[activation_function]
 
         # The neuron has to know if it's an input neuron.
@@ -41,9 +42,6 @@ class Neuron:
     # Add to the current input list.
     def add_input(self, value: float):
         self.inputs.append(value)
-
-    def binary_step(self):
-        self.value = 1 if sum(self.inputs) > 0 else 0
 
     # Add a function to clear neuron inputs.
     def clear_inputs(self):

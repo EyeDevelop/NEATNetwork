@@ -3,6 +3,8 @@ import pickle
 import queue
 import select
 import socket
+import logging
+import traceback
 
 from network.classes.neat import NEAT
 
@@ -31,6 +33,28 @@ class SnekAI:
         # Keep track of the current score of the AI.
         self.current_score = 0
 
+        # Make a logger.
+        self.logger = logging.getLogger("SnekAI")
+        self.logger.setLevel(logging.DEBUG)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        file_handler = logging.FileHandler("snekai.log", mode='w')
+        file_handler.setLevel(logging.DEBUG)
+
+        log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
+
+        console_handler.setFormatter(log_format)
+        file_handler.setFormatter(log_format)
+
+        self.logger.addHandler(file_handler)
+        self.logger.addHandler(console_handler)
+
+    # Make a function to log.
+    def log(self, loglevel, message):
+        self.logger.log(loglevel, message)
+
     # This function is obsolete, learning is handled by networked functions.
     def fitness(self, inputs: list, outputs: list):
         pass
@@ -48,7 +72,7 @@ class SnekAI:
             self.server_socket.bind(('', port))
             self.server_socket.listen(1)
 
-            print(f"Ready for connections on {port}.")
+            self.log(logging.INFO, f"Ready for connections on {port}.")
 
             while inputs:
                 readable, writable, exceptions = select.select(inputs, outputs, inputs)
@@ -58,11 +82,10 @@ class SnekAI:
                         # Accept a new client if available.
                         c_sock, _ = self.server_socket.accept()
 
-                        print("\nSnek Game connected.")
-                        print("\nStarting with:")
-                        print("Generation:", self.neat_object.generation)
-                        print("Individual:", self.neat_object.current_specimen)
-                        print()
+                        self.log(logging.INFO, "Snek Game connected.")
+                        self.log(logging.INFO, "Starting with:")
+                        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
+                        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
 
                         c_sock.setblocking(False)
 
@@ -99,7 +122,7 @@ class SnekAI:
                             if s in self.write_queue.keys():
                                 del self.write_queue[s]
 
-                            print("\nLost connection to Snek.")
+                            self.log(logging.INFO, "Lost connection to Snek.")
 
                 for s in writable:
                     # Write back to the client if a message awaits them.
@@ -122,7 +145,7 @@ class SnekAI:
                     s.close()
                     del self.write_queue[s]
 
-                    print("\nLost connection to Snek.")
+                    self.log(logging.INFO, "Lost connection to Snek.")
 
     def parse_game_data(self, data):
         # Data is separated by a semicolon.
@@ -143,6 +166,8 @@ class SnekAI:
 
         # Send the move, plus the generation and individual number back.
         return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
+        self.log(logging.DEBUG, f"Sending this data back: {return_data}")
+        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Previous Generation Score: {self.neat_object.previous_generation_score}")
 
         return return_data
 
@@ -158,14 +183,13 @@ class SnekAI:
         self.neat_object.next_specimen()
 
         # Notify that the AI died.
-        print("\nThe AI died.")
-        print("Fitness:", fitness)
+        self.log(logging.INFO, "The AI died.")
+        self.log(logging.INFO, f"Fitness: {fitness}\n")
 
         # Show the next individual having a go.
-        print("\nNow trying:")
-        print("Generation:", self.neat_object.generation)
-        print("Individual:", self.neat_object.current_specimen)
-        print()
+        self.log(logging.INFO, "Now trying:")
+        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
+        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
 
 
 def main(s: SnekAI):
@@ -184,21 +208,20 @@ if __name__ == "__main__":
         main(s)
 
     except Exception as e:
-        print("\nCrashed!")
-        print(e)
-        # traceback.print_exc(e)
+        s.log(logging.ERROR, "Crashed!")
+        s.log(logging.ERROR, traceback.format_exc())
         s.server_socket.close()
-        print("Exiting...")
+        s.log(logging.ERROR, "Exiting...")
         exit(1)
 
     except KeyboardInterrupt:
-        print("\nInterrupt received.")
+        s.log(logging.INFO, "Interrupt received.")
 
-        print("Saving NEAT to file...")
+        s.log(logging.INFO, "Saving NEAT to file...")
         s.neat_object.save_network()
 
-        print("Closing server socket...")
+        s.log(logging.INFO, "Closing server socket...")
         s.server_socket.close()
 
-        print("Exiting...")
+        s.log(logging.INFO, "Exiting...")
         exit(0)

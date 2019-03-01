@@ -73,7 +73,7 @@ def crossover(neat_object, network1: Network, network2: Network):
 
 
 # Do fully random choice of weights.
-def random_gene_copy(self, network1: Network, network2: Network):
+def random_gene_copy(neat_object, network1: Network, network2: Network):
     # Make a list of weights of the first parent network.
     weights1 = []
 
@@ -105,7 +105,7 @@ def random_gene_copy(self, network1: Network, network2: Network):
         weights2.append(layer_weights)
 
     # Generate a child.
-    child = Network(self.layer_count, self.neuron_counts, activation_function=self.activation_function)
+    child = Network(neat_object.layer_count, neat_object.neuron_counts, activation_function=neat_object.activation_function)
 
     # Update the child weights.
     for layer_index in range(len(weights1)):
@@ -121,3 +121,8 @@ def random_gene_copy(self, network1: Network, network2: Network):
                 child.layers[layer_index][neuron_index].connections[connection_index][1] = parent_weight
 
     return child
+
+
+# Random breeding function
+def mutation_variants(neat_object, network1: Network, network2: Network):
+    return neat_object.mutate(network1)

@@ -25,3 +25,13 @@ def tanh(inputs: list) -> float:
             value = -1
 
     return value
+
+
+# Apply binary activation.
+def binary_step(inputs: list) -> float:
+    return 1 if sum(inputs) > 0 else 0
+
+
+# Apply ReLU activation.
+def relu(inputs: list) -> float:
+    return 0 if sum(inputs) < 0 else sum(inputs)
