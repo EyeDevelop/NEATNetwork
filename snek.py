@@ -33,6 +33,10 @@ class SnekAI:
         # Keep track of the current score of the AI.
         self.current_score = 0
 
+        # Keep track of which snakes are still alive and their scores.
+        self.alive_snakes = []
+        self.snake_scores = {}
+
         # Make a logger.
         self.logger = logging.getLogger("SnekAI")
         self.logger.setLevel(logging.DEBUG)
@@ -81,12 +85,6 @@ class SnekAI:
                     if s is self.server_socket:
                         # Accept a new client if available.
                         c_sock, _ = self.server_socket.accept()
-
-                        self.log(logging.INFO, "Snek Game connected.")
-                        self.log(logging.INFO, "Starting with:")
-                        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
-                        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
-
                         c_sock.setblocking(False)
 
                         inputs.append(c_sock)
@@ -102,7 +100,8 @@ class SnekAI:
 
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
-                                self.handle_death()
+                                snake_id = data.decode("utf-8").split(";")[0]
+                                self.handle_death(snake_id)
                                 self.write_queue[s].put("U;0;0;0.0")  # Otherwise Unity dies.
                             else:
                                 # Let the AI make a move.
@@ -155,11 +154,12 @@ class SnekAI:
         data = [int(x) for x in data]
 
         # Separate the data passed into the AI, and the ones used for the fitness function.
-        guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
-        current_score = data[24]  # data[24] is de score.
+        snake_id = data[0]
+        guess = self.neat_object.specimen[snake_id].make_prediction(data[1:25])  # data is the surroundings of the snake, together with the distance differentials.
+        current_score = data[25]  # data[24] is de score.
 
         # Update the current score variable.
-        self.current_score = current_score
+        self.snake_scores[snake_id] = current_score
 
         # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
         move = "LRUD"[guess.index(max(guess))]
@@ -172,31 +172,34 @@ class SnekAI:
         return return_data
 
     # A function to handle a client disconnect, meaning the AI died.
-    def handle_death(self):
+    def handle_death(self, snake_id):
         # Calculate the fitness of the network.
-        fitness = self.current_score
+        fitness = self.snake_scores[snake_id]
 
         # Store that in the global fitness dictionary.
-        self.neat_object.specimen_fitness[self.neat_object.current_specimen] = fitness
+        self.neat_object.specimen_fitness[snake_id] = fitness
 
-        # Let the next AI have a go.
-        self.neat_object.next_specimen()
+        # Remove the snake from the alive snakes list.
+        self.alive_snakes.remove(snake_id)
+
+        # Check if there are no more alive snakes left.
+        if len(self.alive_snakes) == 0:
+            # Store the score of the previous generation.
+            self.neat_object.previous_generation_score = sum(self.snake_scores)
+
+            # Breed the next generation.
+            self.neat_object.breed()
 
         # Notify that the AI died.
-        self.log(logging.INFO, "The AI died.")
-        self.log(logging.INFO, f"Fitness: {fitness}\n")
-
-        # Show the next individual having a go.
-        self.log(logging.INFO, "Now trying:")
-        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
-        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
+        self.log(logging.INFO, f"AI {snake_id} died.")
+        self.log(logging.INFO, f"Fitness of {snake_id}: {fitness}\n")
 
 
-def main(s: SnekAI):
+def main(snek_ai: SnekAI):
     try:
-        s.start_server(port=6969)
+        snek_ai.start_server(port=6969)
     except OSError:
-        s.start_server(port=6968)
+        snek_ai.start_server(port=6968)
 
 
 if __name__ == "__main__":
