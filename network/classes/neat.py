@@ -1,7 +1,8 @@
 import pickle
 
 from network.classes.network import Network
-from network.util import rng, breed
+from network.util import breeding
+from network.util import rng
 
 
 class NEAT:
@@ -28,11 +29,7 @@ class NEAT:
         # Update network settings.
         self.activation_function = activation_function
 
-        self.breeding_function = {
-            "crossover": breed.crossover,
-            "random_gene_copy": breed.random_gene_copy,
-            "mutation_variants": breed.mutation_variants,
-        }[breeding_function]
+        self.breeding_function = breeding.breeding_functions[breeding_function]
 
         # Make a list of networks in the current generation.
         self.specimen = []

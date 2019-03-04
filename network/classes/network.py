@@ -15,12 +15,7 @@ class Neuron:
         self.value = 0.0
 
         # Keep track of network settings.
-        self.activation_function = {
-            "sigmoid": activation.sigmoid,
-            "tanh": activation.tanh,
-            "binary_step": activation.binary_step,
-            "relu": activation.relu,
-        }[activation_function]
+        self.activation_function = activation.activation_functions[activation_function]
 
         # The neuron has to know if it's an input neuron.
         self.is_input_neuron = is_input_neuron
@@ -126,6 +121,30 @@ class Network:
         values = [neuron.get_value() for neuron in self.layers[-1]]
 
         return values
+
+    # Function to retrieve weights and biases.
+    def get_weights_and_biases(self) -> tuple:
+        # Make a list of biases and weights.
+        weights = []
+        biases = []
+
+        # Get the actual weights and biases.
+        for layer in self.layers:
+            layer_weights = []
+            layer_biases = []
+
+            for neuron in layer:
+                connection_weights = []
+                layer_biases.append(neuron.bias)
+
+                for connection in neuron.connections:
+                    connection_weights.append(connection[1])
+                layer_weights.append(connection_weights)
+
+            weights.append(layer_weights)
+            biases.append(layer_biases)
+
+        return weights, biases
 
     # Save the network to a file.
     def save_network(self, filename: str = "network.pickle"):
