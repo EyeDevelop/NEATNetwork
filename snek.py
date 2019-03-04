@@ -155,7 +155,7 @@ class SnekAI:
 
         # Data is invalid.
         if len(data) < 25:
-            return
+            return ""
 
         # All data in data is of type int.
         data = [int(x) for x in data]
