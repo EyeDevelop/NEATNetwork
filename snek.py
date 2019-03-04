@@ -103,7 +103,9 @@ class SnekAI:
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
                                 self.handle_death()
-                                self.write_queue[s].put("U;0;0;0.0")  # Otherwise Unity dies.
+                                self.write_queue[s].put(
+                                    ";".join(map(str, ["U", self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
+                                )  # Otherwise Unity dies.
                             else:
                                 # Let the AI make a move.
                                 response = self.parse_game_data(data)
@@ -150,6 +152,10 @@ class SnekAI:
     def parse_game_data(self, data):
         # Data is separated by a semicolon.
         data = data.decode("utf-8").split(';')
+
+        # Data is invalid.
+        if len(data) < 25:
+            return
 
         # All data in data is of type int.
         data = [int(x) for x in data]
