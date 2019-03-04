@@ -153,22 +153,23 @@ class SnekAI:
         # Data is separated by a semicolon.
         data = data.decode("utf-8").split(';')
 
-        # Data is invalid.
-        if len(data) < 25:
-            return ""
+        # Define a placeholder move.
+        move = "U"
 
-        # All data in data is of type int.
-        data = [int(x) for x in data]
+        # Data is valid.
+        if len(data) >= 25:
+            # All data in data is of type int.
+            data = [int(x) for x in data]
 
-        # Separate the data passed into the AI, and the ones used for the fitness function.
-        guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
-        current_score = data[24]  # data[24] is de score.
+            # Separate the data passed into the AI, and the ones used for the fitness function.
+            guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
+            current_score = data[24]  # data[24] is de score.
 
-        # Update the current score variable.
-        self.current_score = current_score
+            # Update the current score variable.
+            self.current_score = current_score
 
-        # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
-        move = "LRUD"[guess.index(max(guess))]
+            # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
+            move = "LRUD"[guess.index(max(guess))]
 
         # Send the move, plus the generation and individual number back.
         return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
