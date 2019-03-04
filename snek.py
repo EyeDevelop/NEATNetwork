@@ -22,7 +22,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 25, 25, 4], population_size=200, retention_rate=50, mutation_chance=0.08, mutation_severity=5, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 25, 25, 4], population_size=750, retention_rate=10, mutation_chance=0.05, mutation_severity=5, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
