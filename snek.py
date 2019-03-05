@@ -22,7 +22,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 14, 9, 4], population_size=200, breed_using=0.3, mutation_chance=0.05, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=200, breed_using=0.4, mutation_chance=0.02, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -153,13 +153,15 @@ class SnekAI:
         # Data is separated by a semicolon.
         data = data.decode("utf-8").split(';')
 
-        # Define a placeholder move.
-        move = "U"
+        # Define a placeholder for the return data.
+        return_data = ""
+
+        self.log(logging.DEBUG, len(data))
 
         # Data is valid.
-        if len(data) >= 25:
+        if len(data) == 25:
             # All data in data is of type int.
-            data = [int(x) for x in data]
+            data = [float(x) for x in data]
 
             # Separate the data passed into the AI, and the ones used for the fitness function.
             guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
@@ -171,10 +173,12 @@ class SnekAI:
             # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
             move = "LRUD"[guess.index(max(guess))]
 
-        # Send the move, plus the generation and individual number back.
-        return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
-        self.log(logging.DEBUG, f"Sending this data back: {return_data}")
-        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}, Average: {round(self.neat_object.previous_generation_score / self.neat_object.population_size)}")
+            # Send the move, plus the generation and individual number back.
+            return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
+            self.log(logging.DEBUG, f"Received this data: {repr(data)}")
+            self.log(logging.DEBUG, f"Sending this data back: {return_data}")
+        else:
+            self.log(logging.WARN, f"Received invalid data!: {repr(data)}")
 
         return return_data
 
@@ -191,7 +195,7 @@ class SnekAI:
 
         # Notify that the AI died.
         self.log(logging.INFO, "The AI died.")
-        self.log(logging.INFO, f"Fitness: {fitness}\n")
+        self.log(logging.INFO, f"Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}, Average of Previous: {round(self.neat_object.previous_generation_score / self.neat_object.population_size)}")
 
         # Show the next individual having a go.
         self.log(logging.INFO, "Now trying:")
