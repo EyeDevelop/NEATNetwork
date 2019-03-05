@@ -174,7 +174,7 @@ class SnekAI:
         # Send the move, plus the generation and individual number back.
         return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
         self.log(logging.DEBUG, f"Sending this data back: {return_data}")
-        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}")
+        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}, Average: {round(self.neat_object.previous_generation_score / self.neat_object.population_size)}")
 
         return return_data
 
