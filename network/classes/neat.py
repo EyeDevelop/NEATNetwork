@@ -1,3 +1,4 @@
+import math
 import pickle
 
 from network.classes.network import Network
@@ -6,10 +7,11 @@ from network.util import rng
 
 
 class NEAT:
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, mutation_chance: float = 0.02, mutation_severity: int = 3, retention_rate=5, activation_function="tanh", breeding_function="crossover"):
-        # Keep track of the generation being trained and the previous score.
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, breed_using=0.35, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover"):
+        # Keep track of the generation being trained and some scoring of the previous generation.
         self.generation = 0
         self.previous_generation_score = 0
+        self.best_of_previous = 0
 
         # Store the network structure.
         self.layer_count = layer_count
@@ -18,10 +20,10 @@ class NEAT:
         # Store the mutation settings.
         self.mutation_chance = mutation_chance
         self.mutation_severity = mutation_severity
+        self.breed_using = breed_using
 
         # Store the population size
         self.population_size = population_size
-        self.retention_rate = retention_rate
 
         # Keep track of the current network being assessed.
         self.current_specimen = 0
@@ -77,40 +79,28 @@ class NEAT:
 
     # Breed to networks with crossover.
     def breed(self):
-        # Sort the networks to get the two best.
+        # Sort the networks to get the top networks.
         specimen_sorted = sorted(self.specimen_fitness.keys(), key=lambda x: self.specimen_fitness[x], reverse=True)
 
-        # Get the two best networks.
-        parent1 = self.specimen[specimen_sorted[0]]
-        parent2 = self.specimen[specimen_sorted[1]]
+        # Store the score of the best network of the previous generation.
+        self.best_of_previous = self.specimen_fitness[specimen_sorted[0]]
 
-        # Make a placeholder list to keep the best networks in.
-        retention_specimen = []
+        # The best of the generation is copied over without crossover or mutation.
+        # Make a list of the new generation.
+        best_network = self.specimen[specimen_sorted[0]]
+        new_generation = [best_network]
 
-        # The best retention_rate networks will be put in the next generation.
-        for key in specimen_sorted[:self.retention_rate]:
-            retention_specimen.append(self.specimen[key])
+        # Pick from the best breed_using of the population.
+        half_index = math.floor(len(specimen_sorted) * self.breed_using)
+        specimen_sorted = specimen_sorted[:half_index]
 
-        # Reset the specimen list.
-        self.specimen = retention_specimen
+        # For memory efficiency, remove the networks that didn't pass the fitness barrier.
+        self.specimen = [self.specimen[x] for x in specimen_sorted]
 
-        # Mutate the networks copied over.
-        for specimen_index in range(len(self.specimen)):
-            # Mutate the network.
-            mutated_network = self.mutate(self.specimen[specimen_index])
-
-            # Replace the un-mutated network.
-            self.specimen[specimen_index] = mutated_network
-
-        # Let 50% of the next generation be created by the two best.
-        # The other 50% by the other networks in the retention_specimen list.
-        half_index = (self.population_size - self.retention_rate) // 2
-
-        # Start generating population_size children based on the two best in the previous generation.
-        for i in range(self.population_size - self.retention_rate):
-            if i >= half_index:
-                parent1 = rng.choice(retention_specimen)
-                parent2 = rng.choice(retention_specimen)
+        # Start generating population_size children based on the previous generation
+        for _ in range(self.population_size - 1):
+            parent1 = rng.choice(self.specimen)
+            parent2 = rng.choice(self.specimen)
 
             # Make a child based on the parents.
             child = self.breeding_function(self, parent1, parent2)
@@ -119,7 +109,10 @@ class NEAT:
             child = self.mutate(child)
 
             # Add it to the specimen list.
-            self.specimen.append(child)
+            new_generation.append(child)
+
+        # Set the specimen list.
+        self.specimen = new_generation
 
         # Add 1 to the generation counter.
         self.generation += 1
@@ -142,8 +135,8 @@ class NEAT:
                 mutate_bias = rng.randint(0, 1) == 1
 
                 if mutate_bias:
-                    # Mutate the bias to a new random value.
-                    network.layers[mutation_layer][mutation_neuron].bias = rng.random_number()
+                    # Mutate the bias to a new random value between -1 and 1.
+                    network.layers[mutation_layer][mutation_neuron].bias = rng.random_number() * 2 - 1
                 else:
                     # Cannot mutate a connection that doesn't exist (for example a neuron in the output layer). Perform that check first.
                     if len(network.layers[mutation_layer][mutation_neuron].connections) <= 0:
@@ -152,7 +145,10 @@ class NEAT:
                     mutation_connection = rng.randint(0, len(network.layers[mutation_layer][mutation_neuron].connections) - 1)
 
                     # Add the mutation to the current value, to make a small change.
-                    network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] *= (rng.random_number() * 2 - 1)
+                    # Have a maximum value of 1 and a minimum of -1.
+                    current_weight = network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1]
+                    weight_delta = max(-1, min(current_weight + (rng.random_number() * 2 - 1), 1))
+                    network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] += weight_delta
 
         return network
 
