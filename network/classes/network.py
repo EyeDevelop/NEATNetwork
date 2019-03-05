@@ -22,7 +22,7 @@ class Neuron:
 
         # Set the bias of the neuron.
         if bias is None:
-            self.bias = rng.random_number()
+            self.bias = rng.random_number() * 2 - 1
         else:
             self.bias = bias
 
