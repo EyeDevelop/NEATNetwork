@@ -22,7 +22,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 25, 25, 4], population_size=750, retention_rate=10, mutation_chance=0.05, mutation_severity=5, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 14, 9, 4], population_size=200, breed_using=0.3, mutation_chance=0.05, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -174,7 +174,7 @@ class SnekAI:
         # Send the move, plus the generation and individual number back.
         return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
         self.log(logging.DEBUG, f"Sending this data back: {return_data}")
-        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Previous Generation Score: {self.neat_object.previous_generation_score}")
+        self.log(logging.DEBUG, f"Current Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}")
 
         return return_data
 
