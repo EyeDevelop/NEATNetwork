@@ -5,8 +5,38 @@ import select
 import socket
 import logging
 import traceback
+import errno
 
 from network.classes.neat import NEAT
+
+
+class CustomNEAT(NEAT):
+
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, breed_using=0.35, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover", data_filename="data.csv"):
+        super().__init__(layer_count, neuron_counts, population_size, breed_using, mutation_chance, mutation_severity, activation_function, breeding_function)
+        self.data_filename = data_filename
+
+        # Make an empty file and write the CSV header.
+        try:
+            with open(self.data_filename, 'wt') as fp:
+                fp.write("Generation,Score,BestScore\n")
+        except OSError:
+            print("No write permissions for data.csv!")
+            exit(1)
+
+    def fitness(self, inputs: list, outputs: list):
+        pass
+
+    def breed(self):
+        # Append data to data.csv.
+        with open(self.data_filename, 'at') as fp:
+            fp.write("{},{},{}".format(
+                self.generation,
+                sum(self.specimen_fitness.values()),
+                sorted(self.specimen_fitness.values())[0]
+            ))
+
+        super().breed()
 
 
 class SnekAI:
@@ -22,7 +52,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = NEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=200, breed_using=0.4, mutation_chance=0.02, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -206,8 +236,11 @@ class SnekAI:
 def main(s: SnekAI):
     try:
         s.start_server(port=6969)
-    except OSError:
-        s.start_server(port=6968)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            s.start_server(port=6968)
+        else:
+            print(traceback.format_exc())
 
 
 if __name__ == "__main__":
