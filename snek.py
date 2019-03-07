@@ -30,7 +30,7 @@ class CustomNEAT(NEAT):
     def breed(self):
         # Append data to data.csv.
         with open(self.data_filename, 'at') as fp:
-            fp.write("{},{},{}".format(
+            fp.write("{},{},{}\n".format(
                 self.generation,
                 sum(self.specimen_fitness.values()),
                 sorted(self.specimen_fitness.values())[0]
