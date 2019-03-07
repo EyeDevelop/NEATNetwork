@@ -2,7 +2,7 @@ from network.classes.network import Network
 from network.util import rng
 
 
-def crossover(neat_object, network1: Network, network2: Network):
+def crossover_half(neat_object, network1: Network, network2: Network):
     # Get the weights and biases of the first parent.
     weights1, biases1 = network1.get_weights_and_biases()
 
