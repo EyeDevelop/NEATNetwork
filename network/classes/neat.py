@@ -21,11 +21,11 @@ class NEAT:
         self.mutation_chance = mutation_chance
 
         # Choose a mutation function.
-        if mutation_severity:
+        if mutation_severity is not None:
             self.mutation_severity = mutation_severity
-            self.mutation_function = self.mutate
+            self.mutation_func = False
         else:
-            self.mutation_function = self.mutate_all
+            self.mutation_func = True
 
         self.breed_using = breed_using
 
@@ -113,7 +113,10 @@ class NEAT:
             child = self.breeding_function(self, parent1, parent2)
 
             # Mutate the child.
-            child = self.mutation_function(child)
+            if self.mutation_func:
+                child = self.mutate_all(child)
+            else:
+                child = self.mutate(child)
 
             # Add it to the specimen list.
             new_generation.append(child)
