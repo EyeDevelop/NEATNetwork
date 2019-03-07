@@ -7,7 +7,7 @@ from network.util import rng
 
 
 class NEAT:
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, breed_using=0.35, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover"):
+    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, breed_using=0.35, mutation_chance: float = 0.02, mutation_severity: int = None, activation_function="tanh", breeding_function="crossover"):
         # Keep track of the generation being trained and some scoring of the previous generation.
         self.generation = 0
         self.previous_generation_score = 0
@@ -19,7 +19,14 @@ class NEAT:
 
         # Store the mutation settings.
         self.mutation_chance = mutation_chance
-        self.mutation_severity = mutation_severity
+
+        # Choose a mutation function.
+        if mutation_severity:
+            self.mutation_severity = mutation_severity
+            self.mutation_function = self.mutate
+        else:
+            self.mutation_function = self.mutate_all
+
         self.breed_using = breed_using
 
         # Store the population size
@@ -106,7 +113,7 @@ class NEAT:
             child = self.breeding_function(self, parent1, parent2)
 
             # Mutate the child.
-            child = self.mutate(child)
+            child = self.mutation_function(child)
 
             # Add it to the specimen list.
             new_generation.append(child)
@@ -149,6 +156,36 @@ class NEAT:
                     current_weight = network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1]
                     weight_delta = max(-1, min(current_weight + (rng.random_number() * 2 - 1), 1))
                     network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] += weight_delta
+
+        return network
+
+    # A function to apply mutation randomly to networks to provide the genetic variation.
+    def mutate_all(self, network):
+        for layer_index in range(len(network.layers)):
+            for neuron_index in range(len(network.layers[layer_index])):
+                # Only mutate bias if chance is met.
+                if rng.random_number() <= self.mutation_chance:
+                    # Get the current bias.
+                    current_bias = network.layers[layer_index][neuron_index].bias
+
+                    # Add a random value between -1 and 1 to that.
+                    new_bias = current_bias + rng.random_number() * 2 - 1
+
+                    # Set the new bias (with a max of 1 and a min of -1)
+                    network.layers[layer_index][neuron_index].bias = max(-1, min(1, current_bias + new_bias))
+
+                # Go through the connections to mutate them.
+                for connection_index in range(len(network.layers[layer_index][neuron_index].connections)):
+                    # Only mutate if chance is met.
+                    if rng.random_number() <= self.mutation_chance:
+                        # Get the current weight.
+                        current_weight = network.layers[layer_index][neuron_index].connections[connection_index][1]
+
+                        # Add a value between -1 and 1 to the current weight.
+                        new_weight = current_weight + rng.random_number() * 2 - 1
+
+                        # Set the new weight (with a max of 1 and a min of -1).
+                        network.layers[layer_index][neuron_index].connections[connection_index][1] = max(-1, min(1, new_weight))
 
         return network
 
