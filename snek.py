@@ -33,7 +33,7 @@ class CustomNEAT(NEAT):
             fp.write("{},{},{}\n".format(
                 self.generation,
                 sum(self.specimen_fitness.values()),
-                sorted(self.specimen_fitness.values())[0]
+                sorted(self.specimen_fitness.values(), reverse=True)[0]
             ))
 
         super().breed()
@@ -52,7 +52,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, mutation_severity=10, activation_function="sigmoid", breeding_function="crossover")
+            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover_half")
 
         # Make a central server socket.
         self.server_socket = None
