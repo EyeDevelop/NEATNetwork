@@ -154,7 +154,7 @@ class NEAT:
                     # Add the mutation to the current value, to make a small change.
                     # Have a maximum value of 1 and a minimum of -1.
                     current_weight = network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1]
-                    weight_delta = max(-1, min(current_weight + (rng.random_number() * 2 - 1), 1))
+                    weight_delta = max(-1, min(current_weight + rng.random_gaussian() / 5, 1))
                     network.layers[mutation_layer][mutation_neuron].connections[mutation_connection][1] += weight_delta
 
         return network
@@ -168,8 +168,8 @@ class NEAT:
                     # Get the current bias.
                     current_bias = network.layers[layer_index][neuron_index].bias
 
-                    # Add a random value between -1 and 1 to that.
-                    new_bias = current_bias + rng.random_number() * 2 - 1
+                    # Add a random Gaussian variable to that.
+                    new_bias = current_bias + rng.random_gaussian() / 5
 
                     # Set the new bias (with a max of 1 and a min of -1)
                     network.layers[layer_index][neuron_index].bias = max(-1, min(1, current_bias + new_bias))
@@ -181,8 +181,8 @@ class NEAT:
                         # Get the current weight.
                         current_weight = network.layers[layer_index][neuron_index].connections[connection_index][1]
 
-                        # Add a value between -1 and 1 to the current weight.
-                        new_weight = current_weight + rng.random_number() * 2 - 1
+                        # Add a random Gaussian variable to that.
+                        new_weight = current_weight + rng.random_gaussian() / 5
 
                         # Set the new weight (with a max of 1 and a min of -1).
                         network.layers[layer_index][neuron_index].connections[connection_index][1] = max(-1, min(1, new_weight))
