@@ -36,11 +36,24 @@ class CustomNEAT(NEAT):
                 sorted(self.specimen_fitness.values(), reverse=True)[0]
             ))
 
+        # Store the very best to a file.
+        # Create a directory for them if it doesn't exist already.
+        if not os.path.exists("BestNetworks"):
+            os.mkdir("BestNetworks")
+
+        # Save the best.
+        with open(os.path.join("BestNetworks", f"{self.generation}.pickle"), 'wb') as fp:
+            best_id = sorted(self.specimen_fitness.keys(), key=lambda x: self.specimen_fitness[x])[0]
+            best_network = self.specimen[best_id]
+
+            pickle.dump(best_network, fp)
+
+        # Run the original breeding function.
         super().breed()
 
 
 class SnekAI:
-    def __init__(self, load_neat_file=""):
+    def __init__(self, load_neat_file="", log_everything=False):
         # Check if the file exists, and if it does, load it.
         neat_loaded = False
 
@@ -52,7 +65,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new NEAT object.
         if not neat_loaded:
-            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover_half")
+            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover")
 
         # Make a central server socket.
         self.server_socket = None
@@ -63,23 +76,24 @@ class SnekAI:
         # Keep track of the current score of the AI.
         self.current_score = 0
 
-        # Make a logger.
-        self.logger = logging.getLogger("SnekAI")
-        self.logger.setLevel(logging.DEBUG)
+        # Make a logger if requested.
+        if log_everything:
+            self.logger = logging.getLogger("SnekAI")
+            self.logger.setLevel(logging.DEBUG)
 
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
+            console_handler = logging.StreamHandler()
+            console_handler.setLevel(logging.INFO)
 
-        file_handler = logging.FileHandler("snekai.log", mode='w')
-        file_handler.setLevel(logging.DEBUG)
+            file_handler = logging.FileHandler("snekai.log", mode='w')
+            file_handler.setLevel(logging.DEBUG)
 
-        log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
+            log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
 
-        console_handler.setFormatter(log_format)
-        file_handler.setFormatter(log_format)
+            console_handler.setFormatter(log_format)
+            file_handler.setFormatter(log_format)
 
-        self.logger.addHandler(file_handler)
-        self.logger.addHandler(console_handler)
+            self.logger.addHandler(file_handler)
+            self.logger.addHandler(console_handler)
 
     # Make a function to log.
     def log(self, loglevel, message):
@@ -245,7 +259,7 @@ def main(s: SnekAI):
 
 if __name__ == "__main__":
     # Make a SnakeAI object and try to resume where it left off training.
-    s = SnekAI()
+    s = SnekAI(log_everything=False)
 
     try:
         # Run the main function.
