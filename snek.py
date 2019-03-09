@@ -73,6 +73,7 @@ class SnekAI:
         self.current_score = 0
 
         # Make a logger if requested.
+        self.logger = None
         if log_everything:
             self.logger = logging.getLogger("SnekAI")
             self.logger.setLevel(logging.DEBUG)
@@ -93,7 +94,8 @@ class SnekAI:
 
     # Make a function to log.
     def log(self, loglevel, message):
-        self.logger.log(loglevel, message)
+        if isinstance(self.logger, logging.Logger):
+            self.logger.log(loglevel, message)
 
     # This function is obsolete, learning is handled by networked functions.
     def fitness(self, inputs: list, outputs: list):
