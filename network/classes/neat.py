@@ -97,17 +97,10 @@ class NEAT:
         best_network = self.specimen[specimen_sorted[0]]
         new_generation = [best_network]
 
-        # Pick from the best breed_using of the population.
-        half_index = math.floor(len(specimen_sorted) * self.breed_using)
-        specimen_sorted = specimen_sorted[:half_index]
-
-        # For memory efficiency, remove the networks that didn't pass the fitness barrier.
-        self.specimen = [self.specimen[x] for x in specimen_sorted]
-
         # Start generating population_size children based on the previous generation
         for _ in range(self.population_size - 1):
-            parent1 = rng.choice(self.specimen)
-            parent2 = rng.choice(self.specimen)
+            parent1 = self.specimen[self.choose_parent()]
+            parent2 = self.specimen[self.choose_parent()]
 
             # Make a child based on the parents.
             child = self.breeding_function(self, parent1, parent2)
@@ -126,6 +119,24 @@ class NEAT:
 
         # Reset the fitness dictionary.
         self.specimen_fitness = {}
+
+    # A function to choose a parent.
+    def choose_parent(self):
+        # Generate a random choosing point.
+        fitness_sum = math.floor(sum(self.specimen_fitness.values()))
+        passing_point = rng.randint(0, fitness_sum)
+
+        # Keep track of a running sum
+        running_sum = 0
+
+        for specimen_id in range(len(self.specimen)):
+            # Add the current fitness to the running sum.
+            running_sum += self.specimen_fitness[specimen_id]
+
+            # Check if the running sum passed the passing point.
+            # If it has, return the specimen id that passed.
+            if running_sum > passing_point:
+                return specimen_id
 
     # A function to apply random mutation to networks to provide the genetic variation.
     def mutate(self, network):

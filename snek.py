@@ -17,12 +17,8 @@ class CustomNEAT(NEAT):
         self.data_filename = data_filename
 
         # Make an empty file and write the CSV header.
-        try:
-            with open(self.data_filename, 'wt') as fp:
-                fp.write("Generation,Score,BestScore\n")
-        except OSError:
-            print("No write permissions for data.csv!")
-            exit(1)
+        with open(self.data_filename, 'wt') as fp:
+            fp.write("Generation,Score,BestScore\n")
 
     def fitness(self, inputs: list, outputs: list):
         pass
