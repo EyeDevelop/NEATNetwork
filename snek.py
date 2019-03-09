@@ -49,7 +49,7 @@ class CustomNEAT(NEAT):
 
 
 class SnekAI:
-    def __init__(self, load_neat_file="", log_everything=False):
+    def __init__(self, load_neat_file="", log_level=logging.INFO, file_log_level=logging.DEBUG):
         # Check if the file exists, and if it does, load it.
         neat_loaded = False
 
@@ -73,29 +73,30 @@ class SnekAI:
         self.current_score = 0
 
         # Make a logger if requested.
-        self.logger = None
-        if log_everything:
-            self.logger = logging.getLogger("SnekAI")
-            self.logger.setLevel(logging.DEBUG)
+        self.logger = logging.getLogger("SnekAI")
+        self.logger.setLevel(logging.DEBUG)
 
+        if log_level is not None:
             console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.INFO)
+            console_handler.setLevel(log_level)
 
+        if file_log_level is not None:
             file_handler = logging.FileHandler("snekai.log", mode='w')
-            file_handler.setLevel(logging.DEBUG)
+            file_handler.setLevel(file_log_level)
 
-            log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
+        log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
 
+        if log_level is not None:
             console_handler.setFormatter(log_format)
-            file_handler.setFormatter(log_format)
-
-            self.logger.addHandler(file_handler)
             self.logger.addHandler(console_handler)
+
+        if file_log_level is not None:
+            file_handler.setFormatter(log_format)
+            self.logger.addHandler(file_handler)
 
     # Make a function to log.
     def log(self, loglevel, message):
-        if isinstance(self.logger, logging.Logger):
-            self.logger.log(loglevel, message)
+        self.logger.log(loglevel, message)
 
     # This function is obsolete, learning is handled by networked functions.
     def fitness(self, inputs: list, outputs: list):
@@ -257,7 +258,7 @@ def main(s: SnekAI):
 
 if __name__ == "__main__":
     # Make a SnakeAI object and try to resume where it left off training.
-    s = SnekAI(log_everything=False)
+    s = SnekAI(file_log_level=None)
 
     try:
         # Run the main function.
