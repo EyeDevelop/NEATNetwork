@@ -7,13 +7,13 @@ import logging
 import traceback
 import errno
 
-from network.classes.neat import NEAT
+from network.classes.gennetic import GeNNetic
 
 
-class CustomNEAT(NEAT):
+class CustomGeNN(GeNNetic):
 
-    def __init__(self, layer_count: int, neuron_counts: list, population_size: int = 50, breed_using=0.35, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover", data_filename="data.csv"):
-        super().__init__(layer_count, neuron_counts, population_size, breed_using, mutation_chance, mutation_severity, activation_function, breeding_function)
+    def __init__(self, hidden_layer_count: int, network_structure: list, population_size: int = 50, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover", console_log_level=logging.INFO, file_log_level=None, data_filename="data.csv"):
+        super().__init__(hidden_layer_count, network_structure, population_size, mutation_chance, mutation_severity, activation_function, breeding_function, console_log_level, file_log_level)
         self.data_filename = data_filename
 
         # Make an empty file and write the CSV header.
@@ -49,19 +49,19 @@ class CustomNEAT(NEAT):
 
 
 class SnekAI:
-    def __init__(self, load_neat_file="", log_level=logging.INFO, file_log_level=logging.DEBUG):
+    def __init__(self, load_genn_file="", console_log_level=logging.INFO, file_log_level=None):
         # Check if the file exists, and if it does, load it.
-        neat_loaded = False
+        genn_loaded = False
 
-        if load_neat_file:
-            if os.path.exists(load_neat_file):
-                with open(load_neat_file, "rb") as fp:
-                    self.neat_object = pickle.load(fp)
-                    neat_loaded = True
+        if load_genn_file:
+            if os.path.exists(load_genn_file):
+                with open(load_genn_file, "rb") as fp:
+                    self.genn_object = pickle.load(fp)
+                    genn_loaded = True
 
-        # If it failed to load the file, generate a new NEAT object.
-        if not neat_loaded:
-            self.neat_object = CustomNEAT(layer_count=2, neuron_counts=[24, 18, 18, 4], population_size=1000, breed_using=0.4, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover")
+        # If it failed to load the file, generate a new genn object.
+        if not genn_loaded:
+            self.genn_object = CustomGeNN(hidden_layer_count=3, network_structure=[24, 24, 24, 24, 4], population_size=1000, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover", console_log_level=console_log_level, file_log_level=file_log_level)
 
         # Make a central server socket.
         self.server_socket = None
@@ -73,26 +73,27 @@ class SnekAI:
         self.current_score = 0
 
         # Make a logger if requested.
-        self.logger = logging.getLogger("SnekAI")
-        self.logger.setLevel(logging.DEBUG)
+        if console_log_level is not None or file_log_level is not None:
+            self.logger = logging.getLogger("SnekAI")
+            self.logger.setLevel(logging.DEBUG)
 
-        if log_level is not None:
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(log_level)
+            if console_log_level is not None:
+                console_handler = logging.StreamHandler()
+                console_handler.setLevel(console_log_level)
 
-        if file_log_level is not None:
-            file_handler = logging.FileHandler("snekai.log", mode='w')
-            file_handler.setLevel(file_log_level)
+            if file_log_level is not None:
+                file_handler = logging.FileHandler("genn.log", mode='w')
+                file_handler.setLevel(file_log_level)
 
-        log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
+            log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
 
-        if log_level is not None:
-            console_handler.setFormatter(log_format)
-            self.logger.addHandler(console_handler)
+            if console_log_level is not None:
+                console_handler.setFormatter(log_format)
+                self.logger.addHandler(console_handler)
 
-        if file_log_level is not None:
-            file_handler.setFormatter(log_format)
-            self.logger.addHandler(file_handler)
+            if file_log_level is not None:
+                file_handler.setFormatter(log_format)
+                self.logger.addHandler(file_handler)
 
     # Make a function to log.
     def log(self, loglevel, message):
@@ -125,10 +126,7 @@ class SnekAI:
                         # Accept a new client if available.
                         c_sock, _ = self.server_socket.accept()
 
-                        self.log(logging.INFO, "Snek Game connected.")
-                        self.log(logging.INFO, "Starting with:")
-                        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
-                        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
+                        self.log(logging.INFO, f"Snek Game connected. Starting with Gen {self.genn_object.generation} and Ind {self.genn_object.current_specimen}")
 
                         c_sock.setblocking(False)
 
@@ -147,7 +145,7 @@ class SnekAI:
                             if "DEAD" in data.decode("utf-8"):
                                 self.handle_death()
                                 self.write_queue[s].put(
-                                    ";".join(map(str, ["U", self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
+                                    ";".join(map(str, ["U", self.genn_object.generation, self.genn_object.current_specimen, self.genn_object.previous_generation_score / self.genn_object.population_size]))
                                 )  # Otherwise Unity dies.
                             else:
                                 # Let the AI make a move.
@@ -207,7 +205,7 @@ class SnekAI:
             data = [float(x) for x in data]
 
             # Separate the data passed into the AI, and the ones used for the fitness function.
-            guess = self.neat_object.specimen[self.neat_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
+            guess = self.genn_object.specimen[self.genn_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
             current_score = data[24]  # data[24] is de score.
 
             # Update the current score variable.
@@ -217,7 +215,7 @@ class SnekAI:
             move = "LRUD"[guess.index(max(guess))]
 
             # Send the move, plus the generation and individual number back.
-            return_data = ";".join(map(str, [move, self.neat_object.generation, self.neat_object.current_specimen, self.neat_object.previous_generation_score / self.neat_object.population_size]))
+            return_data = ";".join(map(str, [move, self.genn_object.generation, self.genn_object.current_specimen, self.genn_object.previous_generation_score / self.genn_object.population_size]))
             self.log(logging.DEBUG, f"Received this data: {repr(data)}")
             self.log(logging.DEBUG, f"Sending this data back: {return_data}")
         else:
@@ -231,19 +229,13 @@ class SnekAI:
         fitness = self.current_score
 
         # Store that in the global fitness dictionary.
-        self.neat_object.specimen_fitness[self.neat_object.current_specimen] = fitness
+        self.genn_object.specimen_fitness[self.genn_object.current_specimen] = fitness
 
         # Let the next AI have a go.
-        self.neat_object.next_specimen()
+        self.genn_object.next_specimen()
 
         # Notify that the AI died.
-        self.log(logging.INFO, "The AI died.")
-        self.log(logging.INFO, f"Score: {self.current_score}, Best of Previous Generation: {self.neat_object.best_of_previous}, Average of Previous: {round(self.neat_object.previous_generation_score / self.neat_object.population_size)}")
-
-        # Show the next individual having a go.
-        self.log(logging.INFO, "Now trying:")
-        self.log(logging.INFO, f"Generation: {self.neat_object.generation}")
-        self.log(logging.INFO, f"Individual: {self.neat_object.current_specimen}\n")
+        self.log(logging.INFO, f"The AI died. Score: {self.current_score}.")
 
 
 def main(s: SnekAI):
@@ -274,8 +266,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         s.log(logging.INFO, "Interrupt received.")
 
-        s.log(logging.INFO, "Saving NEAT to file...")
-        s.neat_object.save_network()
+        s.log(logging.INFO, "Saving genn to file...")
+        s.genn_object.save_network()
 
         s.log(logging.INFO, "Closing server socket...")
         s.server_socket.close()
