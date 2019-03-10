@@ -237,6 +237,10 @@ class SnekAI:
             # Notify Unity we're breeding.
             self.write_queue[s].put("BREED")
         else:
+            self.write_queue[s].put(
+                ";".join(map(str, ["U", self.genn_object.generation, self.genn_object.current_specimen, self.genn_object.previous_generation_score / self.genn_object.population_size]))
+            )  # Otherwise Unity dies.
+
             # Let the next AI have a go.
             self.genn_object.next_specimen()
 
