@@ -233,7 +233,7 @@ class SnekAI:
         self.log(logging.INFO, f"AI {self.genn_object.generation}:{self.genn_object.current_specimen} died. Score: {self.current_score}.")
 
         # Check if we're about to breed.
-        if self.genn_object.current_specimen == self.genn_object.population_size - 1:
+        if self.genn_object.current_specimen >= self.genn_object.population_size - 1:
             # Notify Unity we're breeding.
             self.write_queue[s].put("BREED")
         else:
