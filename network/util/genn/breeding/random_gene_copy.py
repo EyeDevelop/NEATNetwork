@@ -11,7 +11,7 @@ def random_gene_copy(genn_object, network1: Network, network2: Network):
     weights2, biases2 = network2.get_weights_and_biases()
 
     # Generate a child.
-    child = Network(genn_object.layer_count, genn_object.neuron_counts, activation_function=genn_object.activation_function)
+    child = Network(genn_object.hidden_layer_count, genn_object.network_structure, activation_function=genn_object.activation_function)
 
     # Update the child weights.
     for layer_index in range(len(weights1)):

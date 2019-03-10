@@ -10,8 +10,8 @@ def crossover(genn_object, network1: Network, network2: Network):
     weights2, biases2 = network2.get_weights_and_biases()
 
     # Decide on a split point
-    split_point_1 = rng.randint(0, sum(genn_object.neuron_counts) // 2)
-    split_point_2 = rng.randint(split_point_1, sum(genn_object.neuron_counts) - 1)
+    split_point_1 = rng.randint(0, sum(genn_object.network_structure) // 2)
+    split_point_2 = rng.randint(split_point_1, sum(genn_object.network_structure) - 1)
 
     # Keep track of whether the split has been surpassed.
     split_point = False
@@ -20,7 +20,7 @@ def crossover(genn_object, network1: Network, network2: Network):
     neurons_passed = 0
 
     # Create a child network.
-    child = Network(genn_object.layer_count, genn_object.neuron_counts, activation_function=genn_object.activation_function)
+    child = Network(genn_object.hidden_layer_count, genn_object.network_structure, activation_function=genn_object.activation_function)
 
     # Perform the actual crossover.
     for layer_index in range(len(weights1)):

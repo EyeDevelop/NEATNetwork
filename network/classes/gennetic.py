@@ -67,7 +67,7 @@ class GeNNetic:
         self.specimen_fitness = {}
         self.reset_generation()
 
-        self.log(f"Setting up population with: Size: {self.population_size}, Mutation: {self.mutation_chance * 100}%, Structure: {repr(network_structure)}")
+        self.log(f"Setting up population with: Size: {self.population_size}, Mutation: {self.mutation_chance * 100}%, Structure: {repr(self.network_structure)}")
 
     # A helper function to make logging easier.
     def log(self, msg, level=logging.INFO):
