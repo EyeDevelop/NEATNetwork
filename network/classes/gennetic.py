@@ -3,15 +3,15 @@ import math
 import pickle
 
 from network.classes.neuralnet import Network
-from network.util.neat import breeding
+from network.util.genn import breeding
 from network.util import rng
 
 
-class NEAT:
-    def __init__(self, input_size, output_size, population_size: int = 5000, mutation_chance: float = 0.02, mutation_severity: int = None, activation_function="tanh", breeding_function="crossover", console_log_level=logging.INFO, file_log_level=None):
+class GeNNetic:
+    def __init__(self, hidden_layer_count: int, network_structure: list, population_size: int = 5000, mutation_chance: float = 0.02, mutation_severity: int = None, activation_function="tanh", breeding_function="crossover", console_log_level=logging.INFO, file_log_level=None):
         # Make a logger if requested.
         if console_log_level is not None or file_log_level is not None:
-            self.logger = logging.getLogger("NEAT")
+            self.logger = logging.getLogger("GeNN")
             self.logger.setLevel(logging.DEBUG)
 
             if console_log_level is not None:
@@ -19,7 +19,7 @@ class NEAT:
                 console_handler.setLevel(console_log_level)
 
             if file_log_level is not None:
-                file_handler = logging.FileHandler("NEAT.log", mode='w')
+                file_handler = logging.FileHandler("GeNN.log", mode='w')
                 file_handler.setLevel(file_log_level)
 
             log_format = logging.Formatter("[%(name)s] %(asctime)s: %(levelname)s - %(message)s")
@@ -37,9 +37,9 @@ class NEAT:
         self.previous_generation_score = 0
         self.best_of_previous = 0
 
-        # Store the input/output size.
-        self.input_size = input_size
-        self.output_size = output_size
+        # Store the network structure.
+        self.hidden_layer_count = hidden_layer_count
+        self.network_structure = network_structure
 
         # Store the mutation settings.
         self.mutation_chance = mutation_chance
@@ -67,7 +67,7 @@ class NEAT:
         self.specimen_fitness = {}
         self.reset_generation()
 
-        self.log(f"Setting up population with: Size: {self.population_size}, Mutation: {self.mutation_chance * 100}%")
+        self.log(f"Setting up population with: Size: {self.population_size}, Mutation: {self.mutation_chance * 100}%, Structure: {repr(network_structure)}")
 
     # A helper function to make logging easier.
     def log(self, msg, level=logging.INFO):
@@ -79,22 +79,7 @@ class NEAT:
 
         # Generate the random networks and store them in the specimen list.
         for _ in range(self.population_size):
-            # First generate a network structure randomly.
-            # Rounding happens because there can be no float count of layers.
-            # The max happens because there can be no negative counts.
-            hidden_layer_count = round(max(0, rng.random_gaussian(mean=0, std_deviation=2)))
-
-            # Make a random amount of neurons per layer.
-            network_structure = [self.input_size]
-            for _ in range(hidden_layer_count):
-                neurons = round(max(0, rng.random_gaussian(mean=5, std_deviation=5)))
-                network_structure.append(neurons)
-            network_structure.append(self.output_size)
-
-            network = Network(hidden_layer_count, network_structure, activation_function=self.activation_function)
-            network.structure = (hidden_layer_count, network_structure, network.get_weights_and_biases())
-
-            self.specimen.append(network)
+            self.specimen.append(Network(self.hidden_layer_count, self.network_structure, activation_function=self.activation_function))
 
         self.log("Population generated.")
 
@@ -229,15 +214,6 @@ class NEAT:
     def mutate_all(self, network):
         self.log("Starting mutation...", level=logging.DEBUG)
 
-        # Mutate the network parameters.
-        for parameter_id in range(len(network.structure)):
-            if rng.random_number() <= self.mutation_chance:
-                current_parameter = network.structure[parameter_id]
-                new_parameter = current_parameter + round(rng.random_gaussian())
-
-                network.structure[parameter_id] = new_parameter
-
-        # Mutate the weights and biases.
         for layer_index in range(len(network.layers)):
             for neuron_index in range(len(network.layers[layer_index])):
                 # Only mutate bias if chance is met.
@@ -267,8 +243,9 @@ class NEAT:
         return network
 
     # Save the network to a file.
-    def save_network(self, filename: str = "neat.pickle"):
+    def save_network(self, filename: str = "GeNN.pickle"):
         # Open the file.
         with open(filename, "wb") as fp:
             # Store it as pickle object.
             pickle.dump(self, fp)
+
