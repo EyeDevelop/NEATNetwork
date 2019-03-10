@@ -6,6 +6,7 @@ import socket
 import logging
 import traceback
 import errno
+import threading
 
 from network.classes.gennetic import GeNNetic
 
@@ -61,7 +62,7 @@ class SnekAI:
 
         # If it failed to load the file, generate a new genn object.
         if not genn_loaded:
-            self.genn_object = CustomGeNN(hidden_layer_count=3, network_structure=[24, 24, 24, 24, 4], population_size=1000, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover", console_log_level=console_log_level, file_log_level=file_log_level)
+            self.genn_object = CustomGeNN(hidden_layer_count=3, network_structure=[24, 24, 24, 24, 4], population_size=1000, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover", console_log_level=console_log_level, file_log_level=file_log_level, data_filename=f"{__file__}.csv")
 
         # Make a central server socket.
         self.server_socket = None
@@ -143,10 +144,7 @@ class SnekAI:
 
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
-                                self.handle_death()
-                                self.write_queue[s].put(
-                                    ";".join(map(str, ["U", self.genn_object.generation, self.genn_object.current_specimen, self.genn_object.previous_generation_score / self.genn_object.population_size]))
-                                )  # Otherwise Unity dies.
+                                self.handle_death(s)
                             else:
                                 # Let the AI make a move.
                                 response = self.parse_game_data(data)
@@ -224,28 +222,41 @@ class SnekAI:
         return return_data
 
     # A function to handle a client disconnect, meaning the AI died.
-    def handle_death(self):
+    def handle_death(self, s):
         # Calculate the fitness of the network.
         fitness = self.current_score
 
         # Store that in the global fitness dictionary.
         self.genn_object.specimen_fitness[self.genn_object.current_specimen] = fitness
 
-        # Let the next AI have a go.
-        self.genn_object.next_specimen()
-
         # Notify that the AI died.
-        self.log(logging.INFO, f"The AI died. Score: {self.current_score}.")
+        self.log(logging.INFO, f"AI {self.genn_object.generation}:{self.genn_object.current_specimen} died. Score: {self.current_score}.")
+
+        # Check if we're about to breed.
+        if self.genn_object.current_specimen == self.genn_object.population_size - 1:
+            # Notify Unity we're breeding.
+            self.write_queue[s].put("BREED")
+        else:
+            # Let the next AI have a go.
+            self.genn_object.next_specimen()
 
 
 def main(s: SnekAI):
-    try:
-        s.start_server(port=6969)
-    except OSError as e:
-        if e.errno == errno.EADDRINUSE:
-            s.start_server(port=6968)
-        else:
-            print(traceback.format_exc())
+    port_no = 6969
+    ai_started = False
+
+    while not ai_started:
+        try:
+            s.log(logging.INFO, f"Trying to start server on port {port_no}")
+            s.start_server(port=port_no)
+            ai_started = True
+        except OSError as e:
+            if e.errno == errno.EADDRINUSE:
+                port_no -= 1
+                if port_no < 1000:
+                    raise Exception("Cannot open network connection on all ports.")
+            else:
+                print(traceback.format_exc())
 
 
 if __name__ == "__main__":
