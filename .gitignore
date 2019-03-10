@@ -108,3 +108,4 @@ test.py
 *.pickle
 snekai.log
 *.csv
+BestNetworks/
