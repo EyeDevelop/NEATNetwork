@@ -8,7 +8,7 @@ import socket
 import time
 import traceback
 
-from network.classes.gennetic import GeNNetic
+from nnetwork.classes.gennetic import GeNNetic
 
 
 class CustomGeNN(GeNNetic):
@@ -105,7 +105,7 @@ class SnekAI:
     def fitness(self, inputs: list, outputs: list):
         pass
 
-    # Run the AI over the network.
+    # Run the AI over the nnetwork.
     def start_server(self, port=6969):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -240,7 +240,7 @@ class SnekAI:
 
     # A function to handle a client disconnect, meaning the AI died.
     def handle_death(self, s):
-        # Calculate the fitness of the network.
+        # Calculate the fitness of the nnetwork.
         fitness = self.current_score
 
         # Store that in the global fitness dictionary.
@@ -275,7 +275,7 @@ def main(s: SnekAI):
             if e.errno == errno.EADDRINUSE:
                 port_no -= 1
                 if port_no < 1000:
-                    raise Exception("Cannot open network connection on all ports.")
+                    raise Exception("Cannot open nnetwork connection on all ports.")
             else:
                 print(traceback.format_exc())
 
