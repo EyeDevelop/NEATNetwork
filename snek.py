@@ -13,7 +13,7 @@ from nnetwork.classes.gennetic import GeNNetic
 
 class CustomGeNN(GeNNetic):
 
-    def __init__(self, hidden_layer_count: int, network_structure: list, population_size: int = 50, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover", console_log_level=logging.INFO, file_log_level=None, data_filename="data.csv"):
+    def __init__(self, hidden_layer_count: int, network_structure: list, population_size: int = 50, mutation_chance: float = 0.02, mutation_severity: int = 3, activation_function="tanh", breeding_function="crossover", console_log_level=logging.INFO, file_log_level=logging.INFO, data_filename="data.csv"):
         super().__init__(hidden_layer_count, network_structure, population_size, mutation_chance, mutation_severity, activation_function, breeding_function, console_log_level, file_log_level)
         self.data_filename = data_filename
 
@@ -145,7 +145,8 @@ class SnekAI:
 
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
-                                self.handle_death(s, data.split(";")[1])
+                                score = data.decode("utf-8").split(";")[1]
+                                self.handle_death(s, score)
                             else:
                                 # Let the AI make a move.
                                 response = self.parse_game_data(data)
@@ -278,7 +279,7 @@ def main(s: SnekAI):
 
 if __name__ == "__main__":
     # Make a SnakeAI object and try to resume where it left off training.
-    s = SnekAI(file_log_level=None)
+    s = SnekAI()
     filename = "{}.pickle".format(__file__.split(".")[0])
 
     try:
