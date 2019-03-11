@@ -145,7 +145,7 @@ class SnekAI:
 
                             # Check if the AI died.
                             if "DEAD" in data.decode("utf-8"):
-                                self.handle_death(s)
+                                self.handle_death(s, data.split(";")[1])
                             else:
                                 # Let the AI make a move.
                                 response = self.parse_game_data(data)
@@ -215,16 +215,12 @@ class SnekAI:
         self.log(logging.DEBUG, len(data))
 
         # Data is valid.
-        if len(data) == 25:
+        if len(data) == 24:
             # All data in data is of type int.
             data = [float(x) for x in data]
 
             # Separate the data passed into the AI, and the ones used for the fitness function.
             guess = self.genn_object.specimen[self.genn_object.current_specimen].make_prediction(data[:24])  # data is the surroundings of the snake, together with the distance differentials.
-            current_score = data[24]  # data[24] is de score.
-
-            # Update the current score variable.
-            self.current_score = current_score
 
             # Return the move the game makes.  (0 = left, 1 = right, 2 = up, 3 = down)
             move = "LRUD"[guess.index(max(guess))]
@@ -239,9 +235,9 @@ class SnekAI:
         return return_data
 
     # A function to handle a client disconnect, meaning the AI died.
-    def handle_death(self, s):
-        # Calculate the fitness of the nnetwork.
-        fitness = self.current_score
+    def handle_death(self, s, score):
+        # Update the fitness of the nnetwork.
+        fitness = float(score)
 
         # Store that in the global fitness dictionary.
         self.genn_object.specimen_fitness[self.genn_object.current_specimen] = fitness
