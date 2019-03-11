@@ -1,12 +1,12 @@
+import errno
+import logging
 import os
 import pickle
 import queue
 import select
 import socket
-import logging
+import time
 import traceback
-import errno
-import threading
 
 from network.classes.gennetic import GeNNetic
 
@@ -62,13 +62,14 @@ class SnekAI:
 
         # If it failed to load the file, generate a new genn object.
         if not genn_loaded:
-            self.genn_object = CustomGeNN(hidden_layer_count=3, network_structure=[24, 24, 24, 24, 4], population_size=1000, mutation_chance=0.02, activation_function="sigmoid", breeding_function="crossover", console_log_level=console_log_level, file_log_level=file_log_level, data_filename=f"{__file__}.csv")
+            self.genn_object = CustomGeNN(hidden_layer_count=3, network_structure=[24, 40, 40, 40, 4], population_size=2000, mutation_chance=0.05, activation_function="sigmoid", breeding_function="crossover", console_log_level=console_log_level, file_log_level=file_log_level, data_filename=f"{__file__}.csv")
 
         # Make a central server socket.
         self.server_socket = None
 
         # Keep a write queue to write to clients.
         self.write_queue = {}
+        self.last_read_from = {}
 
         # Keep track of the current score of the AI.
         self.current_score = 0
@@ -150,6 +151,8 @@ class SnekAI:
                                 response = self.parse_game_data(data)
                                 self.write_queue[s].put(response)
 
+                            self.last_read_from[s] = time.time()
+
                             if s not in outputs:
                                 outputs.append(s)
                         else:
@@ -187,6 +190,20 @@ class SnekAI:
                     del self.write_queue[s]
 
                     self.log(logging.INFO, "Lost connection to Snek.")
+
+                for s in self.last_read_from.keys():
+                    # Check the time we last sent a message to Snek.
+                    if time.time() - self.last_read_from[s] >= 30:
+                        # Wake up Snek if it is stuck in a Receive() loop.
+                        if s not in self.write_queue.keys():
+                            self.write_queue[s] = queue.Queue()
+
+                        self.write_queue[s].put("{};{};{};{}".format(
+                            "U",
+                            self.genn_object.generation,
+                            self.genn_object.current_specimen,
+                            "0"
+                        ))
 
     def parse_game_data(self, data):
         # Data is separated by a semicolon.
@@ -266,6 +283,7 @@ def main(s: SnekAI):
 if __name__ == "__main__":
     # Make a SnakeAI object and try to resume where it left off training.
     s = SnekAI(file_log_level=None)
+    filename = "{}.pickle".format(__file__.split(".")[0])
 
     try:
         # Run the main function.
@@ -273,6 +291,10 @@ if __name__ == "__main__":
 
     except Exception as e:
         s.log(logging.ERROR, "Crashed!")
+
+        s.log(logging.INFO, f"Saving GeNN to {filename}...")
+        s.genn_object.save_network(filename)
+
         s.log(logging.ERROR, traceback.format_exc())
         s.server_socket.close()
         s.log(logging.ERROR, "Exiting...")
@@ -281,8 +303,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         s.log(logging.INFO, "Interrupt received.")
 
-        s.log(logging.INFO, "Saving genn to file...")
-        s.genn_object.save_network()
+        s.log(logging.INFO, f"Saving GeNN to {filename}...")
+        s.genn_object.save_network(filename)
 
         s.log(logging.INFO, "Closing server socket...")
         s.server_socket.close()
